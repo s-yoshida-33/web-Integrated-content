@@ -4,7 +4,11 @@
   // ここを変えれば表示間隔・切替時間を調整できる(サーバー側に自動反映される仕組みは無い)
   var CONFIG = {
     slideDurationMs: 10000,
-    imageField: 'photo1ThumbW1080'
+    imageField: 'photo1ThumbW1080',
+    // 再生ローテーションのタイミングでファイルが再展開中(書き込み途中)のことがあるため、
+    // 読み込み・パース失敗時は少し待ってリトライする
+    dataLoadMaxRetries: 5,
+    dataLoadRetryDelayMs: 600
   };
 
   var slideEls = [document.getElementById('slideA'), document.getElementById('slideB')];
@@ -221,13 +225,21 @@
     setInterval(showNext, CONFIG.slideDurationMs);
   }
 
-  loadBundle().then(function (bundle) {
-    var allRecords = buildRecords(bundle);
-    var recordFilters = bundle.templateConfig.recordFilters;
-    var activeRecords = allRecords.filter(function (r) { return isRecordActive(r, recordFilters); });
-    startSlideshow(activeRecords, bundle.assetsMap);
-  }).catch(function (err) {
-    document.getElementById('ws-root').innerHTML =
-      '<div class="empty-state">データの読み込みに失敗しました: ' + escapeHtml(String(err && err.message || err)) + '</div>';
-  });
+  function loadAndRender(attempt) {
+    return loadBundle().then(function (bundle) {
+      var allRecords = buildRecords(bundle);
+      var recordFilters = bundle.templateConfig.recordFilters;
+      var activeRecords = allRecords.filter(function (r) { return isRecordActive(r, recordFilters); });
+      startSlideshow(activeRecords, bundle.assetsMap);
+    }).catch(function (err) {
+      if (attempt < CONFIG.dataLoadMaxRetries) {
+        return new Promise(function (resolve) { setTimeout(resolve, CONFIG.dataLoadRetryDelayMs); })
+          .then(function () { return loadAndRender(attempt + 1); });
+      }
+      document.getElementById('ws-root').innerHTML =
+        '<div class="empty-state">データの読み込みに失敗しました: ' + escapeHtml(String(err && err.message || err)) + '</div>';
+    });
+  }
+
+  loadAndRender(0);
 })();
