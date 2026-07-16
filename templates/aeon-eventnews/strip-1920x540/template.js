@@ -15,16 +15,45 @@
     return el ? (el.textContent || '').trim() : '';
   }
 
-  function fetchText(path) {
-    return fetch(path, { cache: 'no-store' }).then(function (res) {
-      if (!res.ok) throw new Error('failed to fetch ' + path + ': ' + res.status);
-      return res.text();
+  // file:// で開かれる再生環境では fetch() が "Failed to fetch" で必ず失敗するため、
+  // XMLHttpRequest にフォールバックする(file://では成功時も status が 0 になる点に注意)。
+  function loadViaXHR(path) {
+    return new Promise(function (resolve, reject) {
+      var xhr = new XMLHttpRequest();
+      xhr.onreadystatechange = function () {
+        if (xhr.readyState !== 4) return;
+        if (xhr.status === 0 || (xhr.status >= 200 && xhr.status < 300)) {
+          resolve(xhr.responseText);
+        } else {
+          reject(new Error('failed to load ' + path + ': status ' + xhr.status));
+        }
+      };
+      xhr.onerror = function () { reject(new Error('failed to load ' + path + ' (network error)')); };
+      try {
+        xhr.open('GET', path, true);
+        xhr.send(null);
+      } catch (e) {
+        reject(e);
+      }
     });
   }
 
-  function fetchJson(path) {
+  function loadText(path) {
     return fetch(path, { cache: 'no-store' })
-      .then(function (res) { return res.ok ? res.json() : null; })
+      .then(function (res) {
+        if (!res.ok) throw new Error('failed to fetch ' + path + ': ' + res.status);
+        return res.text();
+      })
+      .catch(function () { return loadViaXHR(path); });
+  }
+
+  function fetchText(path) {
+    return loadText(path);
+  }
+
+  function fetchJson(path) {
+    return loadText(path)
+      .then(function (text) { return JSON.parse(text); })
       .catch(function () { return null; });
   }
 
