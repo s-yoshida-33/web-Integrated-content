@@ -31,6 +31,9 @@
       xhr.onerror = function () { reject(new Error('failed to load ' + path + ' (network error)')); };
       try {
         xhr.open('GET', path, true);
+        // file:// では charset 判定が既定でUTF-8にならず、CDATA内の日本語が化けて
+        // XMLとして不正になることがあるため、明示的にUTF-8として読ませる。
+        xhr.overrideMimeType('text/plain; charset=utf-8');
         xhr.send(null);
       } catch (e) {
         reject(e);
