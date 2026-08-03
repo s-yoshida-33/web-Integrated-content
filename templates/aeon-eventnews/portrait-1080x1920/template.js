@@ -178,7 +178,7 @@
   }
 
   // footerの1行テキスト用: 文字数ではなく実際の描画幅(px)で判定し、
-  // maxWidthPx に収まらない場合は末尾を「・・・」に置き換えて切り詰める。
+  // maxWidthPx に収まらない場合は末尾を「･･･」に置き換えて切り詰める。
   // (全角/半角が混在するため、文字数カウントより実測の方が確実)
   function setTextTruncatedToWidth(el, text, maxWidthPx, ellipsis) {
     if (!el) return;
@@ -210,20 +210,20 @@
   }
 
   // <subTitle> を body コンテナのタイトルに描画する。
-  // 仕様: 1行15文字以内・最大2行、文字数オーバー時は末尾を「・・・」に置き換える。
+  // 仕様: 1行15文字以内・最大2行、文字数オーバー時は末尾を「･･･」に置き換える。
   function renderTitle(record) {
     var el = document.getElementById('event-title');
     if (!el) return;
-    var lines = wrapByCharCount(record ? record.subTitle : '', 15, 2, '・・・');
+    var lines = wrapByCharCount(record ? record.subTitle : '', 15, 2, '･･･');
     el.innerHTML = lines.map(escapeHtml).join('<br>');
   }
 
   // <bodyShort> を body コンテナの本文に描画する。
-  // 仕様: 1行25文字以内・最大5行、文字数オーバー時は末尾を「・・・」に置き換える。
+  // 仕様: 1行25文字以内・最大5行、文字数オーバー時は末尾を「･･･」に置き換える。
   function renderBody(record) {
     var el = document.getElementById('event-body');
     if (!el) return;
-    var lines = wrapByCharCount(record ? record.bodyShort : '', 25, 5, '・・・');
+    var lines = wrapByCharCount(record ? record.bodyShort : '', 25, 5, '･･･');
     el.innerHTML = lines.map(escapeHtml).join('<br>');
   }
 
@@ -235,7 +235,7 @@
 
   // <dateStart>～<dateEnd> / <time> / <venues>(空の場合は<place>) を footer コンテナに描画する。
   // 仕様: 1行のみ表示。テキストエリア幅(700px)からアイコン(32px)とgap(20px)を
-  // 差し引いた648pxに収まらない場合は、タイトル/本文と同様に末尾を「・・・」に置き換える。
+  // 差し引いた648pxに収まらない場合は、タイトル/本文と同様に末尾を「･･･」に置き換える。
   // データが無い項目は行ごと非表示にする。
   function renderFooter(record) {
     var dateEl = document.getElementById('event-date');
@@ -254,9 +254,9 @@
     setRowVisible('footer-time-row', !!timeText);
     setRowVisible('footer-venues-row', !!venuesText);
 
-    if (dateText) setTextTruncatedToWidth(dateEl, dateText, maxWidthPx, '・・・');
-    if (timeText) setTextTruncatedToWidth(timeEl, timeText, maxWidthPx, '・・・');
-    if (venuesText) setTextTruncatedToWidth(venuesEl, venuesText, maxWidthPx, '・・・');
+    if (dateText) setTextTruncatedToWidth(dateEl, dateText, maxWidthPx, '･･･');
+    if (timeText) setTextTruncatedToWidth(timeEl, timeText, maxWidthPx, '･･･');
+    if (venuesText) setTextTruncatedToWidth(venuesEl, venuesText, maxWidthPx, '･･･');
   }
 
   // <eventId> からイベントページのWEB QRを生成する(URLベースは assets/tpl/mall-config.js 側の
