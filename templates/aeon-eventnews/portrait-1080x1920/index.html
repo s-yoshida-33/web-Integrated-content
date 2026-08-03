@@ -15,7 +15,7 @@
       </div>
     </div>
     <div class="container container-side" data-container="side">
-      <svg class="side-label" viewBox="0 0 120 1800" xmlns="http://www.w3.org/2000/svg">
+      <svg class="side-label" viewBox="0 0 120 1800">
         <text x="60" y="900" transform="rotate(90 60 900)" text-anchor="middle" dominant-baseline="central"
           font-family="Inter" font-weight="900" font-size="96" letter-spacing="9.6"
           fill="#FFFFFF" stroke="#FF7700" stroke-width="12" paint-order="stroke fill">EVENT NEWS</text>
@@ -30,15 +30,15 @@
     </div>
     <div class="container container-footer" data-container="footer">
       <div class="footer-info">
-        <div class="footer-text-area">
+        <div class="footer-text-area" id="footer-date-row">
           <img class="footer-icon" src="assets/tpl/date.svg" alt="">
           <span class="footer-text" id="event-date"></span>
         </div>
-        <div class="footer-text-area">
+        <div class="footer-text-area" id="footer-time-row">
           <img class="footer-icon" src="assets/tpl/time.svg" alt="">
           <span class="footer-text" id="event-time"></span>
         </div>
-        <div class="footer-text-area">
+        <div class="footer-text-area" id="footer-venues-row">
           <img class="footer-icon" src="assets/tpl/location.svg" alt="">
           <span class="footer-text" id="event-venues"></span>
         </div>
@@ -49,6 +49,7 @@
   </div>
   <!-- image/body/footerコンテナ(<photo1ThumbW1080>/<subTitle>/<bodyShort>/<dateStart>/<dateEnd>/<time>/<venues>/
        <eventId>によるWEBQR)まで接続済み。複数レコードのローテーションは全コンテナ実装完了後に対応する -->
+  <script src="assets/tpl/mall-config.js"></script>
   <script src="assets/tpl/qrcode.js"></script>
   <script src="template.js"></script>
   <script>

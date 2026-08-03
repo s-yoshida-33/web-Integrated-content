@@ -4,9 +4,6 @@
   // ここを変えれば表示間隔を調整できる(サーバー側に自動反映される仕組みは無い)
   var CONFIG = {
     imageField: 'photo1ThumbW1080',
-    // このテンプレートの配信先モール固定値。別モールに展開する場合はここを書き換える
-    // (mallIdはデータフィードに含まれないため、テンプレート側の定数として持つ)
-    mallId: 'sakaikitahanada',
     // 仕様書通り1記事15秒
     slideDurationMs: 15000,
     // 再生ローテーションのタイミングでファイルが再展開中(書き込み途中)のことがあるため、
@@ -180,6 +177,29 @@
     return lines;
   }
 
+  // footerの1行テキスト用: 文字数ではなく実際の描画幅(px)で判定し、
+  // maxWidthPx に収まらない場合は末尾を「・・・」に置き換えて切り詰める。
+  // (全角/半角が混在するため、文字数カウントより実測の方が確実)
+  function setTextTruncatedToWidth(el, text, maxWidthPx, ellipsis) {
+    if (!el) return;
+    var full = text || '';
+    el.textContent = full;
+    if (!full || el.getBoundingClientRect().width <= maxWidthPx) return;
+
+    var lo = 0;
+    var hi = full.length;
+    while (lo < hi) {
+      var mid = Math.ceil((lo + hi) / 2);
+      el.textContent = full.slice(0, mid) + ellipsis;
+      if (el.getBoundingClientRect().width <= maxWidthPx) {
+        lo = mid;
+      } else {
+        hi = mid - 1;
+      }
+    }
+    el.textContent = full.slice(0, lo) + ellipsis;
+  }
+
   // <photo1ThumbW1080> を image コンテナ(960x960)に描画する。
   // 比率が1:1でない画像は object-fit:contain (style.css 側) で
   // 枠内に収め、はみ出す分をクロップせず余白(白背景)として残す。
@@ -207,19 +227,39 @@
     el.innerHTML = lines.map(escapeHtml).join('<br>');
   }
 
+  // データが無い行(アイコン+テキスト)は丸ごと非表示にする。
+  function setRowVisible(rowId, visible) {
+    var row = document.getElementById(rowId);
+    if (row) row.style.display = visible ? '' : 'none';
+  }
+
   // <dateStart>～<dateEnd> / <time> / <venues> を footer コンテナに描画する。
+  // 仕様: 1行のみ表示。テキストエリア幅(700px)からアイコン(32px)とgap(20px)を
+  // 差し引いた648pxに収まらない場合は、タイトル/本文と同様に末尾を「・・・」に置き換える。
+  // データが無い項目は行ごと非表示にする。
   function renderFooter(record) {
     var dateEl = document.getElementById('event-date');
     var timeEl = document.getElementById('event-time');
     var venuesEl = document.getElementById('event-venues');
+    var maxWidthPx = 700 - 32 - 20;
+
     var dateStart = record ? record.dateStart : '';
     var dateEnd = record ? record.dateEnd : '';
-    if (dateEl) dateEl.textContent = (dateStart || dateEnd) ? (dateStart + '～' + dateEnd) : '';
-    if (timeEl) timeEl.textContent = record ? record.time : '';
-    if (venuesEl) venuesEl.textContent = record ? record.venues : '';
+    var dateText = (dateStart || dateEnd) ? (dateStart + '～' + dateEnd) : '';
+    var timeText = record ? record.time : '';
+    var venuesText = record ? record.venues : '';
+
+    setRowVisible('footer-date-row', !!dateText);
+    setRowVisible('footer-time-row', !!timeText);
+    setRowVisible('footer-venues-row', !!venuesText);
+
+    if (dateText) setTextTruncatedToWidth(dateEl, dateText, maxWidthPx, '・・・');
+    if (timeText) setTextTruncatedToWidth(timeEl, timeText, maxWidthPx, '・・・');
+    if (venuesText) setTextTruncatedToWidth(venuesEl, venuesText, maxWidthPx, '・・・');
   }
 
-  // <eventId> から https://<mallId>.aeonmall.jp/event/<eventId> のWEB QRを生成する。
+  // <eventId> からイベントページのWEB QRを生成する(URLベースは assets/tpl/mall-config.js 側の
+  // window.MALL_CONFIG.eventUrlBase で定義。テンプレート本体にモール固有URLの文字列を持たせない)。
   // 仕様: <statusWeb> が "1" の記事に限り表示(QR自体・「詳しくはWEBで」ラベルとも)。
   function renderQr(record) {
     var qrEl = document.getElementById('footer-qr');
@@ -237,7 +277,8 @@
     qrEl.style.display = '';
     if (labelEl) labelEl.style.display = '';
 
-    var url = 'https://' + CONFIG.mallId + '.aeonmall.jp/event/' + record.eventId;
+    var urlBase = (window.MALL_CONFIG && window.MALL_CONFIG.eventUrlBase) || '';
+    var url = urlBase + record.eventId;
     var qr = qrcode(0, 'M');
     qr.addData(url);
     qr.make();
