@@ -1,0 +1,10 @@
+tmp/
+
+# CMS側がsyncのたびに再生成する動作確認用の実データ(このリポジトリには含めない)
+templates/aeon-eventnews/*/data.xml
+templates/aeon-eventnews/*/template.json
+templates/aeon-eventnews/*/assets-map.json
+templates/aeon-eventnews/*/qr-map.json
+templates/aeon-eventnews/*/assets/*
+!templates/aeon-eventnews/*/assets/tpl
+!templates/aeon-eventnews/*/assets/tpl/**

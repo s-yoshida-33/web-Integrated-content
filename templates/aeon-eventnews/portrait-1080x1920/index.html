@@ -7,9 +7,63 @@
 </head>
 <body>
   <div id="ws-root">
-    <div class="slide" id="slideA"></div>
-    <div class="slide" id="slideB"></div>
+    <div class="container container-header" data-container="header">
+      <img class="header-logo" src="assets/tpl/AEON_MALL_logo.svg" alt="AEON MALL">
+      <div class="header-clock-group">
+        <img class="header-clock-icon" src="assets/tpl/current_time.svg" alt="">
+        <span class="header-clock" id="header-clock"></span>
+      </div>
+    </div>
+    <div class="container container-side" data-container="side">
+      <svg class="side-label" viewBox="0 0 120 1800" xmlns="http://www.w3.org/2000/svg">
+        <text x="60" y="900" transform="rotate(90 60 900)" text-anchor="middle" dominant-baseline="central"
+          font-family="Inter" font-weight="900" font-size="96" letter-spacing="9.6"
+          fill="#FFFFFF" stroke="#FF7700" stroke-width="12" paint-order="stroke fill">EVENT NEWS</text>
+      </svg>
+    </div>
+    <div class="container container-image" data-container="image">
+      <img class="event-photo" id="event-photo" alt="">
+    </div>
+    <div class="container container-body" data-container="body">
+      <h1 class="event-title" id="event-title"></h1>
+      <p class="event-body" id="event-body"></p>
+    </div>
+    <div class="container container-footer" data-container="footer">
+      <div class="footer-info">
+        <div class="footer-text-area">
+          <img class="footer-icon" src="assets/tpl/date.svg" alt="">
+          <span class="footer-text" id="event-date"></span>
+        </div>
+        <div class="footer-text-area">
+          <img class="footer-icon" src="assets/tpl/time.svg" alt="">
+          <span class="footer-text" id="event-time"></span>
+        </div>
+        <div class="footer-text-area">
+          <img class="footer-icon" src="assets/tpl/location.svg" alt="">
+          <span class="footer-text" id="event-venues"></span>
+        </div>
+        <span class="footer-qr-label" id="footer-qr-label">詳しくはWEBで</span>
+        <div class="footer-qr" id="footer-qr"></div>
+      </div>
+    </div>
   </div>
+  <!-- image/body/footerコンテナ(<photo1ThumbW1080>/<subTitle>/<bodyShort>/<dateStart>/<dateEnd>/<time>/<venues>/
+       <eventId>によるWEBQR)まで接続済み。複数レコードのローテーションは全コンテナ実装完了後に対応する -->
+  <script src="assets/tpl/qrcode.js"></script>
   <script src="template.js"></script>
+  <script>
+    (function () {
+      'use strict';
+      function pad(n) { return String(n).padStart(2, '0'); }
+      function renderClock() {
+        var el = document.getElementById('header-clock');
+        if (!el) return;
+        var now = new Date();
+        el.textContent = pad(now.getHours()) + ':' + pad(now.getMinutes());
+      }
+      renderClock();
+      setInterval(renderClock, 1000);
+    })();
+  </script>
 </body>
 </html>
