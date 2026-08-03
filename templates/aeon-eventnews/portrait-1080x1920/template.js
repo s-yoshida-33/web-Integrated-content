@@ -233,7 +233,7 @@
     if (row) row.style.display = visible ? '' : 'none';
   }
 
-  // <dateStart>～<dateEnd> / <time> / <venues> を footer コンテナに描画する。
+  // <dateStart>～<dateEnd> / <time> / <venues>(空の場合は<place>) を footer コンテナに描画する。
   // 仕様: 1行のみ表示。テキストエリア幅(700px)からアイコン(32px)とgap(20px)を
   // 差し引いた648pxに収まらない場合は、タイトル/本文と同様に末尾を「・・・」に置き換える。
   // データが無い項目は行ごと非表示にする。
@@ -247,7 +247,8 @@
     var dateEnd = record ? record.dateEnd : '';
     var dateText = (dateStart || dateEnd) ? (dateStart + '～' + dateEnd) : '';
     var timeText = record ? record.time : '';
-    var venuesText = record ? record.venues : '';
+    // <venues> が空の場合は <place> にフォールバック、両方空なら非表示。
+    var venuesText = record ? (record.venues || record.place || '') : '';
 
     setRowVisible('footer-date-row', !!dateText);
     setRowVisible('footer-time-row', !!timeText);
