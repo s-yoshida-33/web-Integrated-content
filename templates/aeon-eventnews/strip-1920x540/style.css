@@ -1,0 +1,103 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  width: 1920px;
+  height: 540px;
+  overflow: hidden;
+  background: #000;
+  font-family: "Noto Sans JP", "Yu Gothic", sans-serif;
+}
+
+#ws-root {
+  position: relative;
+  width: 1920px;
+  height: 540px;
+}
+
+.slide {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 500ms ease-in-out;
+  display: flex;
+  background: #101010;
+}
+
+.slide.is-active {
+  opacity: 1;
+  z-index: 1;
+}
+
+.card {
+  flex: 1 1 0;
+  display: flex;
+  align-items: stretch;
+  border-right: 2px solid rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.card:last-child {
+  border-right: none;
+}
+
+.card-thumb {
+  flex: 0 0 420px;
+  height: 100%;
+  background-color: #1a1a1a;
+  background-size: cover;
+  background-position: center;
+}
+
+.card-text {
+  flex: 1 1 auto;
+  padding: 28px 32px;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+}
+
+.card-category {
+  align-self: flex-start;
+  padding: 4px 16px;
+  margin-bottom: 12px;
+  border-radius: 999px;
+  background: #e8342a;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.card-title {
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 1.3;
+  margin-bottom: 14px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.card-meta {
+  font-size: 22px;
+  color: rgba(255, 255, 255, 0.8);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.empty-state {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+  font-size: 28px;
+  background: #0a0a0a;
+}
