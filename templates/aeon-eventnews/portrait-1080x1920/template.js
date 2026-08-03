@@ -353,5 +353,19 @@
     });
   }
 
+  // ロゴ・アイコン等のテンプレート固有アセット(SVG)を <img src> ではなく
+  // fetchでテキスト取得してインラインSVGとして注入する。
+  // CMSのアセット配信がContent-Typeヘッダーを付けないことがあり、その場合
+  // <img>では「画像として不正」と判定され壊れたアイコン表示になるため回避する。
+  function loadInlineSvgs() {
+    var nodes = document.querySelectorAll('.inline-svg[data-src]');
+    Array.prototype.forEach.call(nodes, function (el) {
+      fetchText(el.getAttribute('data-src'))
+        .then(function (svgText) { el.innerHTML = svgText; })
+        .catch(function (err) { console.error('inline svg load failed: ' + el.getAttribute('data-src'), err); });
+    });
+  }
+
+  loadInlineSvgs();
   loadAndRender(0);
 })();

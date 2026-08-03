@@ -33,6 +33,14 @@ html, body {
   background: #fff;
 }
 
+/* <img src>ではなくfetch+innerHTMLでSVGを注入するため、内部の<svg>を
+   コンテナ(.header-logo/.header-clock-icon/.footer-icon)いっぱいに広げる */
+.inline-svg svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
 .container-header {
   top: 0;
   left: 0;
