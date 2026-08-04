@@ -28,10 +28,30 @@
       <h1 class="event-title" id="event-title"></h1>
       <p class="event-body" id="event-body"></p>
     </div>
-    <div class="container container-footer" data-container="footer"><span class="debug-tag">footer 960×270</span></div>
+    <div class="container container-footer" data-container="footer">
+      <div class="footer-info">
+        <div class="footer-text-area" id="footer-date-row">
+          <span class="footer-icon inline-svg" data-src="assets/tpl/date.svg"></span>
+          <span class="footer-text" id="event-date"></span>
+        </div>
+        <div class="footer-text-area" id="footer-time-row">
+          <span class="footer-icon inline-svg" data-src="assets/tpl/time.svg"></span>
+          <span class="footer-text" id="event-time"></span>
+        </div>
+        <div class="footer-text-area" id="footer-venues-row">
+          <span class="footer-icon inline-svg" data-src="assets/tpl/location.svg"></span>
+          <span class="footer-text" id="event-venues"></span>
+        </div>
+        <span class="footer-qr-label" id="footer-qr-label">詳しくはWEBで</span>
+        <div class="footer-qr" id="footer-qr"></div>
+      </div>
+    </div>
   </div>
-  <!-- ヘッダー(ロゴ・現在時刻)のみ接続済み。他コンテナ実装時に対象フィールドと
-       複数レコードのローテーションを拡張する -->
+  <!-- header/image/eventlabel/body/footerコンテナ(<photo1ThumbW1080>/<subTitle>/<bodyShort>/
+       <dateStart>/<dateEnd>/<time>/<venues>/<eventId>によるWEBQR)まで接続済み。
+       複数レコードのローテーションは実装完了後に対応する -->
+  <script src="assets/tpl/mall-config.js"></script>
+  <script src="assets/tpl/qrcode.js"></script>
   <script src="template.js"></script>
 </body>
 </html>
