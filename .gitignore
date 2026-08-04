@@ -8,3 +8,11 @@ templates/aeon-eventnews/*/qr-map.json
 templates/aeon-eventnews/*/assets/*
 !templates/aeon-eventnews/*/assets/tpl
 !templates/aeon-eventnews/*/assets/tpl/**
+
+templates/aeon-shopnews/*/data.xml
+templates/aeon-shopnews/*/template.json
+templates/aeon-shopnews/*/assets-map.json
+templates/aeon-shopnews/*/qr-map.json
+templates/aeon-shopnews/*/assets/*
+!templates/aeon-shopnews/*/assets/tpl
+!templates/aeon-shopnews/*/assets/tpl/**
