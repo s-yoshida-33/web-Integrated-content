@@ -1,14 +1,30 @@
+@font-face {
+  font-family: "Inter";
+  src: url("assets/tpl/Inter-Variable.ttf") format("truetype-variations");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
 }
 
+/* <img src>ではなくfetch+innerHTMLでSVGを注入するため、内部の<svg>を
+   コンテナ(.header-logo/.header-clock-icon等)いっぱいに広げる */
+.inline-svg svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
 html, body {
   width: 1920px;
   height: 1080px;
   overflow: hidden;
-  background: #000;
+  background: #fff;
   font-family: "Noto Sans JP", "Yu Gothic", sans-serif;
 }
 
@@ -16,89 +32,87 @@ html, body {
   position: relative;
   width: 1920px;
   height: 1080px;
+  background: #fff;
 }
 
-.slide {
+.container {
   position: absolute;
-  inset: 0;
-  opacity: 0;
-  transition: opacity 600ms ease-in-out;
+  box-sizing: border-box;
+  background: #fff;
+  border: 2px solid #000;
 }
 
-.slide.is-active {
-  opacity: 1;
-  z-index: 1;
-}
-
-.slide-bg {
+.debug-tag {
   position: absolute;
-  inset: 0;
-  background-color: #111;
-  background-size: cover;
-  background-position: center;
+  top: 8px;
+  left: 8px;
+  font-size: 16px;
+  color: #999;
 }
 
-.slide-overlay {
-  position: absolute;
+.container-header {
+  top: 0;
   left: 0;
-  right: 0;
-  bottom: 0;
-  padding: 64px 96px 72px;
-  color: #fff;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.82) 0%, rgba(0, 0, 0, 0.55) 45%, rgba(0, 0, 0, 0) 100%);
+  width: 1920px;
+  height: 120px;
+  border: none;
 }
 
-.slide-category {
-  display: inline-block;
-  padding: 6px 20px;
-  margin-bottom: 20px;
-  border-radius: 999px;
-  background: #e8342a;
-  font-size: 26px;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-}
-
-.slide-title {
-  font-size: 64px;
-  font-weight: 700;
-  line-height: 1.25;
-  margin-bottom: 20px;
-  max-width: 1500px;
-  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.6);
-}
-
-.slide-body {
-  font-size: 30px;
-  line-height: 1.6;
-  max-width: 1300px;
-  margin-bottom: 28px;
-  color: rgba(255, 255, 255, 0.92);
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.slide-meta {
-  display: flex;
-  gap: 48px;
-  font-size: 30px;
-  font-weight: 600;
-}
-
-.slide-meta .icon {
-  margin-right: 12px;
-  opacity: 0.85;
-}
-
-.empty-state {
+.header-logo {
   position: absolute;
-  inset: 0;
+  top: 35px;
+  left: 30px;
+  width: 300px;
+  height: 50px;
+}
+
+.header-clock-group {
+  position: absolute;
+  top: 50%;
+  right: 30px;
+  transform: translateY(-50%);
   display: flex;
   align-items: center;
-  justify-content: center;
-  color: #666;
-  font-size: 36px;
-  background: #0a0a0a;
+  gap: 20px;
+}
+
+.header-clock-icon {
+  width: 60px;
+  height: 60px;
+}
+
+.header-clock {
+  font-family: "Inter", sans-serif;
+  font-weight: 600;
+  font-size: 64px;
+  line-height: 1;
+  color: #000000;
+}
+
+.container-image {
+  top: 120px;
+  left: 0;
+  width: 960px;
+  height: 960px;
+}
+
+.container-eventlabel {
+  top: 120px;
+  left: 960px;
+  width: 960px;
+  height: 120px;
+}
+
+.container-body {
+  top: 240px;
+  left: 960px;
+  width: 960px;
+  height: 570px;
+}
+
+.container-footer {
+  top: 810px;
+  left: 960px;
+  width: 960px;
+  height: 270px;
 }
