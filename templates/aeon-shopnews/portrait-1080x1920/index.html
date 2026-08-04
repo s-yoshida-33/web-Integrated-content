@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>AEON SHOPNEWS - Portrait 1080x1920</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="ws-root">
+    <div class="container container-header" data-container="header">
+      <span class="header-logo inline-svg" data-src="assets/tpl/AEON_MALL_logo.svg"></span>
+      <div class="header-clock-group">
+        <span class="header-clock-icon inline-svg" data-src="assets/tpl/current_time.svg"></span>
+        <span class="header-clock" id="header-clock"></span>
+      </div>
+    </div>
+    <div class="container container-side" data-container="side">
+      <svg class="side-label" viewBox="0 0 120 1800">
+        <text x="60" y="900" transform="rotate(90 60 900)" text-anchor="middle" dominant-baseline="central"
+          font-family="Inter" font-weight="900" font-size="96" letter-spacing="9.6"
+          fill="#FFFFFF" stroke="#FF006F" stroke-width="12" paint-order="stroke fill">SHOP NEWS</text>
+      </svg>
+    </div>
+    <div class="container container-image" data-container="image">
+      <img class="event-photo" id="event-photo" alt="">
+    </div>
+    <div class="container container-body" data-container="body">
+      <h1 class="event-title" id="event-title"></h1>
+      <p class="event-body" id="event-body"></p>
+    </div>
+    <div class="container container-footer" data-container="footer">
+      <div class="footer-info">
+        <img class="shop-logo" id="shop-logo" alt="">
+        <div class="footer-text-block" id="footer-text-block">
+          <div class="footer-text-area" id="footer-shopname-row">
+            <span class="footer-text" id="shop-name"></span>
+          </div>
+          <div class="footer-text-area" id="footer-date-row">
+            <span class="footer-icon inline-svg" data-src="assets/tpl/date.svg"></span>
+            <span class="footer-text" id="shop-date"></span>
+          </div>
+          <div class="footer-text-area" id="footer-floor-row">
+            <span class="footer-icon inline-svg" data-src="assets/tpl/location.svg"></span>
+            <span class="footer-text" id="shop-floor"></span>
+          </div>
+        </div>
+        <span class="footer-qr-label" id="footer-qr-label">詳しくはWEBで</span>
+        <img class="footer-qr" id="footer-qr" alt="">
+      </div>
+    </div>
+  </div>
+  <!-- image/body(<photo1ThumbW1080>/<subTitle>/<bodyShort>)/フッター(<shopLogo>によるショップロゴ、
+       <shopName>/<dateStart>~<dateEnd>/<shopFloorsName>もしくは<shopFloorName>のテキスト3行、
+       <shopNewsId>によるWEBQR)まで接続済み。WEB QRはCMSがsync時に生成するqr-map.json
+       (shopNewsId→QR画像パス)をそのまま利用する。 -->
+  <script src="template.js"></script>
+</body>
+</html>
