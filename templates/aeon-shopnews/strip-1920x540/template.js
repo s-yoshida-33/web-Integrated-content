@@ -276,8 +276,9 @@
   }
 
   // <shopLogo> を footer コンテナのショップロゴエリア(147x147)に描画する。
-  // テキストエリア3行の直下(0px間隔)にflex-columnで自然に配置されるため、
-  // 横型・縦型と異なりロゴの有無によるテキストエリアの幅拡張は不要。
+  // テキスト行数がデータの有無で変動しても位置がずれないよう、footer-infoの
+  // 左下に固定配置(position:absolute)しているため、横型・縦型と異なり
+  // ロゴの有無によるテキストエリアの幅拡張も不要。
   function renderShopLogo(record, assetsMap) {
     var el = document.getElementById('shop-logo');
     if (!el) return;

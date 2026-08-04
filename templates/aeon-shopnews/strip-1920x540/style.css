@@ -184,14 +184,17 @@ html, body {
   white-space: nowrap;
 }
 
-/* テキストエリア3行の直下(0px間隔)に配置。footer-infoの縦幅(302px = 342-padding40)に
-   対して 3行(150px)+ロゴ(147px)=297px で収まる計算のため、実測でも確認する。 */
+/* テキスト行数(データの有無で1~3行に変動)に関わらず左下に固定表示する。
+   3行すべて表示される最大時でもテキストエリア(150px)との間に5pxの余白が残るため、
+   footer-infoの左下(20,20)に固定してもテキストと重ならない。 */
 .shop-logo {
+  position: absolute;
+  left: 20px;
+  bottom: 20px;
   width: 147px;
   height: 147px;
   display: block;
   object-fit: contain;
-  flex-shrink: 0;
 }
 
 .footer-qr {

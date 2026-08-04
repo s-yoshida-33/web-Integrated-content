@@ -50,8 +50,8 @@
   <!-- header/image/eventlabel/body/フッター(<shopLogo>によるショップロゴ、<shopName>/
        <dateStart>~<dateEnd>/<shopFloorsName>もしくは<shopFloorName>のテキスト3行、
        <shopNewsId>によるWEBQR)まで接続済み。WEB QRはCMSがsync時に生成するqr-map.json
-       (shopNewsId→QR画像パス)をそのまま利用する。ショップロゴはテキスト3行の直下に
-       0px間隔で配置(フッターインフォエリアの縦幅にちょうど収まる寸法)。 -->
+       (shopNewsId→QR画像パス)をそのまま利用する。ショップロゴはテキスト行数の変動
+       (データが無い行は非表示)に関わらずフッターインフォエリアの左下に固定表示する。 -->
   <script src="template.js"></script>
 </body>
 </html>
