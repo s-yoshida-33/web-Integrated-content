@@ -7,9 +7,14 @@
 </head>
 <body>
   <div id="ws-root">
-    <div class="slide" id="slideA"></div>
-    <div class="slide" id="slideB"></div>
+    <div class="container container-header" data-container="header"><span class="debug-tag">header 1920×90</span></div>
+    <div class="container container-image" data-container="image"><span class="debug-tag">image 450×450</span></div>
+    <div class="container container-eventlabel" data-container="eventlabel"><span class="debug-tag">label 1470×68</span></div>
+    <div class="container container-body" data-container="body"><span class="debug-tag">body 810×382</span></div>
+    <div class="container container-footer" data-container="footer"><span class="debug-tag">footer 660×382</span></div>
   </div>
-  <script src="template.js"></script>
+  <!-- コンテナ配置確認中のためtemplate.jsは一時的に無効化。要素配置・データ連携の段階で
+       縦型/横型の実装を踏まえて書き直して復帰させる -->
+  <!-- <script src="template.js"></script> -->
 </body>
 </html>
