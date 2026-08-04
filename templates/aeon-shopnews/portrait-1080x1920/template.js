@@ -167,6 +167,35 @@
     return lines;
   }
 
+  // footerの1行テキスト用: 文字数ではなく実際の描画幅(px)で判定し、
+  // maxWidthPx に収まらない場合は末尾を「･･･」に置き換えて切り詰める。
+  // (全角/半角が混在するため、文字数カウントより実測の方が確実)
+  function setTextTruncatedToWidth(el, text, maxWidthPx, ellipsis) {
+    if (!el) return;
+    var full = text || '';
+    el.textContent = full;
+    if (!full || el.getBoundingClientRect().width <= maxWidthPx) return;
+
+    var lo = 0;
+    var hi = full.length;
+    while (lo < hi) {
+      var mid = Math.ceil((lo + hi) / 2);
+      el.textContent = full.slice(0, mid) + ellipsis;
+      if (el.getBoundingClientRect().width <= maxWidthPx) {
+        lo = mid;
+      } else {
+        hi = mid - 1;
+      }
+    }
+    el.textContent = full.slice(0, lo) + ellipsis;
+  }
+
+  // データが無い行(アイコン+テキスト)は丸ごと非表示にする。
+  function setRowVisible(rowId, visible) {
+    var row = document.getElementById(rowId);
+    if (row) row.style.display = visible ? '' : 'none';
+  }
+
   // ロゴ・アイコン等のテンプレート固有アセット(SVG)を <img src> ではなく
   // fetchでテキスト取得してインラインSVGとして注入する。
   // CMSのアセット配信がContent-Typeヘッダーを付けないことがあり、その場合
@@ -223,6 +252,34 @@
     el.src = record ? resolveAsset(record.shopLogo, assetsMap) : '';
   }
 
+  // <shopName> / <dateStart>～<dateEnd> / <shopFloorsName>(空の場合は<shopFloorName>) を
+  // footerコンテナのテキストエリア(530x50 x3行)に描画する。
+  // 仕様: 1行のみ表示。ショップ名行はアイコン無しのため530px、日付・階数行は
+  // アイコン(32px)とgap(20px)を差し引いた478pxに収まらない場合、末尾を「･･･」に置き換える。
+  // データが無い項目は行ごと非表示にする。
+  function renderFooterText(record) {
+    var nameEl = document.getElementById('shop-name');
+    var dateEl = document.getElementById('shop-date');
+    var floorEl = document.getElementById('shop-floor');
+    var nameMaxWidthPx = 530;
+    var iconRowMaxWidthPx = 530 - 32 - 20;
+
+    var nameText = record ? record.shopName : '';
+    var dateStart = record ? record.dateStart : '';
+    var dateEnd = record ? record.dateEnd : '';
+    var dateText = (dateStart || dateEnd) ? (dateStart + '～' + dateEnd) : '';
+    // <shopFloorsName> が空の場合は <shopFloorName> にフォールバック、両方空なら非表示。
+    var floorText = record ? (record.shopFloorsName || record.shopFloorName || '') : '';
+
+    setRowVisible('footer-shopname-row', !!nameText);
+    setRowVisible('footer-date-row', !!dateText);
+    setRowVisible('footer-floor-row', !!floorText);
+
+    if (nameText) setTextTruncatedToWidth(nameEl, nameText, nameMaxWidthPx, '･･･');
+    if (dateText) setTextTruncatedToWidth(dateEl, dateText, iconRowMaxWidthPx, '･･･');
+    if (floorText) setTextTruncatedToWidth(floorEl, floorText, iconRowMaxWidthPx, '･･･');
+  }
+
   // <shopNewsId> のWEB QRを表示する。QR画像自体はCMSがsync時に生成し、
   // qr-map.json(shopNewsId→画像パス)で解決できるため、テンプレート側での
   // QR生成(URL組み立て含む)は行わない。
@@ -251,12 +308,13 @@
       var allRecords = buildRecords(bundle);
       var recordFilters = bundle.templateConfig.recordFilters;
       var activeRecords = allRecords.filter(function (r) { return isRecordActive(r, recordFilters); });
-      // TODO: 店舗名・フロア等の表示仕様確定後にスライドショー(複数レコードのローテーション)を追加する。
+      // TODO: 全コンテナ実装完了後にスライドショー(複数レコードのローテーション)を追加する。
       // 現時点では各コンテナ単体の確認用に、先頭の有効レコードのみ描画する。
       renderImage(activeRecords[0], bundle.assetsMap);
       renderTitle(activeRecords[0]);
       renderBody(activeRecords[0]);
       renderShopLogo(activeRecords[0], bundle.assetsMap);
+      renderFooterText(activeRecords[0]);
       renderQr(activeRecords[0], bundle.qrMap);
     }).catch(function (err) {
       if (attempt < CONFIG.dataLoadMaxRetries) {
