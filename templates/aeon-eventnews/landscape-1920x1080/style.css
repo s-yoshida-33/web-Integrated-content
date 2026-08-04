@@ -95,6 +95,7 @@ html, body {
   width: 960px;
   height: 960px;
   border: none;
+  background: #FFF4E1;
 }
 
 .event-photo {
