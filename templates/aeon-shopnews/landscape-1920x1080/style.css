@@ -1,0 +1,236 @@
+@font-face {
+  font-family: "Inter";
+  src: url("assets/tpl/Inter-Variable.ttf") format("truetype-variations");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* <img src>ではなくfetch+innerHTMLでSVGを注入するため、内部の<svg>を
+   コンテナ(.header-logo/.header-clock-icon等)いっぱいに広げる */
+.inline-svg svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+html, body {
+  width: 1920px;
+  height: 1080px;
+  overflow: hidden;
+  background: #fff;
+  font-family: "Noto Sans JP", "Yu Gothic", sans-serif;
+}
+
+#ws-root {
+  position: relative;
+  width: 1920px;
+  height: 1080px;
+  background: #fff;
+}
+
+.container {
+  position: absolute;
+  box-sizing: border-box;
+  background: #fff;
+  border: 2px solid #000;
+}
+
+.container-header {
+  top: 0;
+  left: 0;
+  width: 1920px;
+  height: 120px;
+  border: none;
+}
+
+.header-logo {
+  position: absolute;
+  top: 35px;
+  left: 30px;
+  width: 300px;
+  height: 50px;
+}
+
+.header-clock-group {
+  position: absolute;
+  top: 50%;
+  right: 30px;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.header-clock-icon {
+  width: 60px;
+  height: 60px;
+}
+
+.header-clock {
+  font-family: "Inter", sans-serif;
+  font-weight: 600;
+  font-size: 64px;
+  line-height: 1;
+  color: #000000;
+}
+
+.container-image {
+  top: 120px;
+  left: 0;
+  width: 960px;
+  height: 960px;
+  border: none;
+}
+
+.event-photo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+}
+
+.container-eventlabel {
+  top: 120px;
+  left: 960px;
+  width: 960px;
+  height: 120px;
+  background: #FD99E3;
+  border: none;
+}
+
+.eventlabel-svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 960px;
+  height: 120px;
+}
+
+.container-body {
+  top: 240px;
+  left: 960px;
+  width: 960px;
+  height: 570px;
+  padding: 40px;
+  border: none;
+}
+
+.event-title {
+  font-family: "Inter", "Noto Sans JP", "Yu Gothic", sans-serif;
+  font-weight: 900;
+  font-size: 56px;
+  line-height: 1.3;
+  color: #000000;
+  white-space: nowrap;
+  margin-bottom: 40px;
+}
+
+.event-body {
+  font-family: "Inter", "Noto Sans JP", "Yu Gothic", sans-serif;
+  font-weight: 600;
+  font-size: 34px;
+  line-height: 1.5;
+  color: #000000;
+  white-space: nowrap;
+  margin-bottom: 40px;
+}
+
+.container-footer {
+  top: 810px;
+  left: 960px;
+  width: 960px;
+  height: 270px;
+  padding: 40px;
+  border: none;
+}
+
+.footer-info {
+  position: relative;
+  width: 880px;
+  height: 190px;
+  outline: 4px solid #FF006F;
+  box-sizing: border-box;
+  padding: 20px;
+}
+
+.shop-logo {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  width: 150px;
+  height: 150px;
+  display: block;
+  object-fit: contain;
+}
+
+.footer-text-block {
+  position: absolute;
+  top: 20px;
+  left: 190px;
+  width: 530px;
+  height: 150px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* <shopLogo>が無い場合、ロゴ分の領域(左端20pxから)までテキストエリアを拡張する */
+.footer-text-block.footer-text-block--expanded {
+  left: 20px;
+  width: 700px;
+}
+
+.footer-text-area {
+  width: 100%;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.footer-qr {
+  position: absolute;
+  right: 20px;
+  bottom: 20px;
+  width: 120px;
+  height: 120px;
+  background: #fff;
+  outline: 2px solid #FF006F;
+  box-sizing: border-box;
+  display: block;
+  object-fit: contain;
+}
+
+.footer-qr-label {
+  position: absolute;
+  right: 20px;
+  bottom: 142px;
+  width: 120px;
+  text-align: center;
+  font-family: "Inter", "Noto Sans JP", "Yu Gothic", sans-serif;
+  font-weight: 900;
+  font-size: 16px;
+  color: #FF006F;
+  white-space: nowrap;
+}
+
+.footer-icon {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+}
+
+.footer-text {
+  font-family: "Inter", "Noto Sans JP", "Yu Gothic", sans-serif;
+  font-weight: 600;
+  font-size: 24px;
+  color: #000000;
+  white-space: nowrap;
+}
