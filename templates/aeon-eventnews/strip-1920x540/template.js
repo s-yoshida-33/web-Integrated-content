@@ -168,6 +168,29 @@
     return lines;
   }
 
+  // footerの1行テキスト用: 文字数ではなく実際の描画幅(px)で判定し、
+  // maxWidthPx に収まらない場合は末尾を「･･･」に置き換えて切り詰める。
+  // (全角/半角が混在するため、文字数カウントより実測の方が確実)
+  function setTextTruncatedToWidth(el, text, maxWidthPx, ellipsis) {
+    if (!el) return;
+    var full = text || '';
+    el.textContent = full;
+    if (!full || el.getBoundingClientRect().width <= maxWidthPx) return;
+
+    var lo = 0;
+    var hi = full.length;
+    while (lo < hi) {
+      var mid = Math.ceil((lo + hi) / 2);
+      el.textContent = full.slice(0, mid) + ellipsis;
+      if (el.getBoundingClientRect().width <= maxWidthPx) {
+        lo = mid;
+      } else {
+        hi = mid - 1;
+      }
+    }
+    el.textContent = full.slice(0, lo) + ellipsis;
+  }
+
   // ロゴ・アイコン等のテンプレート固有アセット(SVG)を <img src> ではなく
   // fetchでテキスト取得してインラインSVGとして注入する。
   // CMSのアセット配信がContent-Typeヘッダーを付けないことがあり、その場合
@@ -217,6 +240,38 @@
     el.innerHTML = lines.map(escapeHtml).join('<br>');
   }
 
+  // データが無い行(アイコン+テキスト)は丸ごと非表示にする。
+  function setRowVisible(rowId, visible) {
+    var row = document.getElementById(rowId);
+    if (row) row.style.display = visible ? '' : 'none';
+  }
+
+  // <dateStart>～<dateEnd> / <time> / <venues>(空の場合は<place>) を footer コンテナに描画する。
+  // 仕様: 1行のみ表示。テキストエリア幅(580px)からアイコン(32px)とgap(20px)を
+  // 差し引いた528pxに収まらない場合は、タイトル/本文と同様に末尾を「･･･」に置き換える。
+  // データが無い項目は行ごと非表示にする。
+  function renderFooter(record) {
+    var dateEl = document.getElementById('event-date');
+    var timeEl = document.getElementById('event-time');
+    var venuesEl = document.getElementById('event-venues');
+    var maxWidthPx = 580 - 32 - 20;
+
+    var dateStart = record ? record.dateStart : '';
+    var dateEnd = record ? record.dateEnd : '';
+    var dateText = (dateStart || dateEnd) ? (dateStart + '～' + dateEnd) : '';
+    var timeText = record ? record.time : '';
+    // <venues> が空の場合は <place> にフォールバック、両方空なら非表示。
+    var venuesText = record ? (record.venues || record.place || '') : '';
+
+    setRowVisible('footer-date-row', !!dateText);
+    setRowVisible('footer-time-row', !!timeText);
+    setRowVisible('footer-venues-row', !!venuesText);
+
+    if (dateText) setTextTruncatedToWidth(dateEl, dateText, maxWidthPx, '･･･');
+    if (timeText) setTextTruncatedToWidth(timeEl, timeText, maxWidthPx, '･･･');
+    if (venuesText) setTextTruncatedToWidth(venuesEl, venuesText, maxWidthPx, '･･･');
+  }
+
   // <eventId> のWEB QRを表示する。QR画像自体はCMSがsync時に生成し、
   // qr-map.json(eventId→画像パス)で解決できるため、テンプレート側での
   // QR生成(URL組み立て含む)は行わない。
@@ -250,6 +305,7 @@
       renderImage(activeRecords[0], bundle.assetsMap);
       renderTitle(activeRecords[0]);
       renderBody(activeRecords[0]);
+      renderFooter(activeRecords[0]);
       renderQr(activeRecords[0], bundle.qrMap);
     }).catch(function (err) {
       if (attempt < CONFIG.dataLoadMaxRetries) {
