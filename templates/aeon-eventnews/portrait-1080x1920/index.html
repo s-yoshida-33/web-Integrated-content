@@ -43,14 +43,13 @@
           <span class="footer-text" id="event-venues"></span>
         </div>
         <span class="footer-qr-label" id="footer-qr-label">詳しくはWEBで</span>
-        <div class="footer-qr" id="footer-qr"></div>
+        <img class="footer-qr" id="footer-qr" alt="">
       </div>
     </div>
   </div>
   <!-- image/body/footerコンテナ(<photo1ThumbW1080>/<subTitle>/<bodyShort>/<dateStart>/<dateEnd>/<time>/<venues>/
-       <eventId>によるWEBQR)まで接続済み。複数レコードのローテーションは全コンテナ実装完了後に対応する -->
-  <script src="assets/tpl/mall-config.js"></script>
-  <script src="assets/tpl/qrcode.js"></script>
+       <eventId>によるWEBQR)まで接続済み。複数レコードのローテーションは全コンテナ実装完了後に対応する。
+       WEB QRはCMSがsync時に生成するqr-map.json(eventId→QR画像パス)をそのまま利用する。 -->
   <script src="template.js"></script>
   <script>
     (function () {
