@@ -167,3 +167,29 @@ html, body {
   box-sizing: border-box;
   padding: 20px;
 }
+
+.footer-qr {
+  position: absolute;
+  right: 20px;
+  bottom: 20px;
+  width: 120px;
+  height: 120px;
+  background: #fff;
+  outline: 2px solid #FF7700;
+  box-sizing: border-box;
+  display: block;
+  object-fit: contain;
+}
+
+.footer-qr-label {
+  position: absolute;
+  right: 20px;
+  bottom: 142px;
+  width: 120px;
+  text-align: center;
+  font-family: "Inter", "Noto Sans JP", "Yu Gothic", sans-serif;
+  font-weight: 900;
+  font-size: 16px;
+  color: #FF7700;
+  white-space: nowrap;
+}
