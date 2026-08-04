@@ -1,18 +1,15 @@
 (function () {
   'use strict';
 
-  // ここを変えれば表示間隔・切替時間を調整できる(サーバー側に自動反映される仕組みは無い)
   var CONFIG = {
-    slideDurationMs: 10000,
     imageField: 'photo1ThumbW1080',
+    // 仕様書通り1記事15秒
+    slideDurationMs: 15000,
     // 再生ローテーションのタイミングでファイルが再展開中(書き込み途中)のことがあるため、
     // 読み込み・パース失敗時は少し待ってリトライする
     dataLoadMaxRetries: 5,
     dataLoadRetryDelayMs: 600
   };
-
-  var slideEls = [document.getElementById('slideA'), document.getElementById('slideB')];
-  var activeIndex = 0;
 
   function stripText(el) {
     return el ? (el.textContent || '').trim() : '';
@@ -44,7 +41,7 @@
     });
   }
 
-  function loadText(path) {
+  function fetchText(path) {
     return fetch(path, { cache: 'no-store' })
       .then(function (res) {
         if (!res.ok) throw new Error('failed to fetch ' + path + ': ' + res.status);
@@ -53,12 +50,8 @@
       .catch(function () { return loadViaXHR(path); });
   }
 
-  function fetchText(path) {
-    return loadText(path);
-  }
-
   function fetchJson(path) {
-    return loadText(path)
+    return fetchText(path)
       .then(function (text) { return JSON.parse(text); })
       .catch(function () { return null; });
   }
@@ -88,13 +81,15 @@
   function loadBundle() {
     return Promise.all([
       fetchJson('template.json'),
-      fetchJson('assets-map.json')
+      fetchJson('assets-map.json'),
+      fetchJson('qr-map.json')
     ]).then(function (results) {
       var templateConfig = results[0] || {};
       var assetsMap = results[1] || {};
+      var qrMap = results[2] || {};
       var dataFile = templateConfig.dataFile || 'data.xml';
       return fetchText(dataFile).then(function (raw) {
-        return { templateConfig: templateConfig, assetsMap: assetsMap, dataFile: dataFile, raw: raw };
+        return { templateConfig: templateConfig, assetsMap: assetsMap, qrMap: qrMap, dataFile: dataFile, raw: raw };
       });
     });
   }
@@ -104,8 +99,8 @@
     var recordPath = templateConfig.recordPath || '//data/item';
     var fields = templateConfig.fields || [];
     var sourcePaths = fields.map(function (f) { return f.sourcePath; });
-    // eventId は resume キーとして常に読む(マッピングでrole="id"が未設定でも必要)
     if (sourcePaths.indexOf('eventId') === -1) sourcePaths.push('eventId');
+    if (sourcePaths.indexOf(CONFIG.imageField) === -1) sourcePaths.push(CONFIG.imageField);
 
     var records = [];
     if (/\.xml$/i.test(bundle.dataFile)) {
@@ -119,7 +114,6 @@
         records.push(raw);
       });
     } else {
-      // JSON フィード向けの簡易対応。recordPath を "/" 区切りのキーとして辿る
       var segments = recordPath.replace(/^\/+/, '').split('/').filter(Boolean);
       var cursor = JSON.parse(bundle.raw);
       segments.forEach(function (seg) { if (cursor) cursor = cursor[seg]; });
@@ -133,9 +127,10 @@
   }
 
   // recordFilters が template.json にあれば汎用ロジックで評価。
-  // このAEON EVENTNEWSの実データではrecordFiltersが未設定だったため、
-  // その場合は statusSignage=1 かつ公開期間内、という既定ルールを使う。
-  // マッピング画面でrecordFiltersを設定すればそちらが優先される。
+  // 未設定の場合は statusWeb=1 のみを既定ルールとする。
+  // (template.jsonのfieldsからstatusSignage/pubStart/pubEndが削除されたため、
+  // これらに基づく判定は行えない。現在のマッピングではrole:filterはstatusWebと
+  // updateDateのみ)
   function isRecordActive(raw, recordFilters) {
     if (recordFilters && recordFilters.length) {
       return recordFilters.every(function (f) {
@@ -146,13 +141,7 @@
         return true;
       });
     }
-    if (raw.statusSignage !== '1') return false;
-    var now = new Date();
-    var start = parseDate(raw.pubStart);
-    var end = parseDate(raw.pubEnd);
-    if (start && now < start) return false;
-    if (end && now > end) return false;
-    return true;
+    return raw.statusWeb === '1';
   }
 
   function resolveAsset(rawValue, assetsMap) {
@@ -160,28 +149,160 @@
     return assetsMap[rawValue] || '';
   }
 
-  function renderSlide(el, record, assetsMap) {
-    if (!record) {
-      el.innerHTML = '<div class="empty-state">表示できるイベント情報がありません</div>';
-      return;
-    }
-    var imgSrc = resolveAsset(record[CONFIG.imageField], assetsMap);
-    el.innerHTML =
-      '<div class="slide-bg" style="' + (imgSrc ? 'background-image:url(\'' + imgSrc + '\')' : '') + '"></div>' +
-      '<div class="slide-overlay">' +
-      (record.categories ? '<span class="slide-category">' + escapeHtml(record.categories) + '</span>' : '') +
-      '<h1 class="slide-title">' + escapeHtml(record.title) + '</h1>' +
-      (record.bodyShort ? '<p class="slide-body">' + escapeHtml(record.bodyShort) + '</p>' : '') +
-      '<div class="slide-meta">' +
-      (record.time ? '<span>' + escapeHtml(record.time) + '</span>' : '') +
-      (record.place ? '<span>' + escapeHtml(record.place) + '</span>' : '') +
-      '</div></div>';
-  }
-
   function escapeHtml(s) {
     return (s || '').replace(/[&<>"']/g, function (c) {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
     });
+  }
+
+  // 1行あたりの最大文字数×最大行数を超える場合、末尾を省略記号に置き換えて
+  // (省略記号を含めた合計文字数が上限に収まるようにして) maxLines 行に分割する。
+  function wrapByCharCount(text, maxCharsPerLine, maxLines, ellipsis) {
+    var maxTotal = maxCharsPerLine * maxLines;
+    var t = text || '';
+    if (t.length > maxTotal) {
+      t = t.slice(0, maxTotal - ellipsis.length) + ellipsis;
+    }
+    var lines = [];
+    for (var i = 0; i < t.length; i += maxCharsPerLine) {
+      lines.push(t.slice(i, i + maxCharsPerLine));
+    }
+    return lines;
+  }
+
+  // ロゴ・アイコン等のテンプレート固有アセット(SVG)を <img src> ではなく
+  // fetchでテキスト取得してインラインSVGとして注入する。
+  // CMSのアセット配信がContent-Typeヘッダーを付けないことがあり、その場合
+  // <img>では「画像として不正」と判定され壊れたアイコン表示になるため回避する。
+  function loadInlineSvgs() {
+    var nodes = document.querySelectorAll('.inline-svg[data-src]');
+    Array.prototype.forEach.call(nodes, function (el) {
+      fetchText(el.getAttribute('data-src'))
+        .then(function (svgText) { el.innerHTML = svgText; })
+        .catch(function (err) { console.error('inline svg load failed: ' + el.getAttribute('data-src'), err); });
+    });
+  }
+
+  function pad(n) { return String(n).padStart(2, '0'); }
+
+  function renderClock() {
+    var el = document.getElementById('header-clock');
+    if (!el) return;
+    var now = new Date();
+    el.textContent = pad(now.getHours()) + ':' + pad(now.getMinutes());
+  }
+
+  // <photo1ThumbW1080> を image コンテナ(960x960)に描画する。
+  // 比率が1:1でない画像は object-fit:contain (style.css 側) で
+  // 枠内に収め、はみ出す分をクロップせず余白(白背景)として残す。
+  function renderImage(record, assetsMap) {
+    var el = document.getElementById('event-photo');
+    if (!el) return;
+    el.src = record ? resolveAsset(record[CONFIG.imageField], assetsMap) : '';
+  }
+
+  // <subTitle> を body コンテナのタイトルに描画する。
+  // 仕様: 1行15文字以内・最大2行、文字数オーバー時は末尾を「･･･」に置き換える。
+  function renderTitle(record) {
+    var el = document.getElementById('event-title');
+    if (!el) return;
+    var lines = wrapByCharCount(record ? record.subTitle : '', 15, 2, '･･･');
+    el.innerHTML = lines.map(escapeHtml).join('<br>');
+  }
+
+  // <bodyShort> を body コンテナの本文に描画する。
+  // 仕様: 1行25文字以内・最大5行、文字数オーバー時は末尾を「･･･」に置き換える。
+  function renderBody(record) {
+    var el = document.getElementById('event-body');
+    if (!el) return;
+    var lines = wrapByCharCount(record ? record.bodyShort : '', 25, 5, '･･･');
+    el.innerHTML = lines.map(escapeHtml).join('<br>');
+  }
+
+  // footerの1行テキスト用: 文字数ではなく実際の描画幅(px)で判定し、
+  // maxWidthPx に収まらない場合は末尾を「･･･」に置き換えて切り詰める。
+  // (全角/半角が混在するため、文字数カウントより実測の方が確実)
+  function setTextTruncatedToWidth(el, text, maxWidthPx, ellipsis) {
+    if (!el) return;
+    var full = text || '';
+    el.textContent = full;
+    if (!full || el.getBoundingClientRect().width <= maxWidthPx) return;
+
+    var lo = 0;
+    var hi = full.length;
+    while (lo < hi) {
+      var mid = Math.ceil((lo + hi) / 2);
+      el.textContent = full.slice(0, mid) + ellipsis;
+      if (el.getBoundingClientRect().width <= maxWidthPx) {
+        lo = mid;
+      } else {
+        hi = mid - 1;
+      }
+    }
+    el.textContent = full.slice(0, lo) + ellipsis;
+  }
+
+  // データが無い行(アイコン+テキスト)は丸ごと非表示にする。
+  function setRowVisible(rowId, visible) {
+    var row = document.getElementById(rowId);
+    if (row) row.style.display = visible ? '' : 'none';
+  }
+
+  // <dateStart>～<dateEnd> / <time> / <venues>(空の場合は<place>) を footer コンテナに描画する。
+  // 仕様: 1行のみ表示。テキストエリア幅(700px)からアイコン(32px)とgap(20px)を
+  // 差し引いた648pxに収まらない場合は、タイトル/本文と同様に末尾を「･･･」に置き換える。
+  // データが無い項目は行ごと非表示にする。
+  function renderFooter(record) {
+    var dateEl = document.getElementById('event-date');
+    var timeEl = document.getElementById('event-time');
+    var venuesEl = document.getElementById('event-venues');
+    var maxWidthPx = 700 - 32 - 20;
+
+    var dateStart = record ? record.dateStart : '';
+    var dateEnd = record ? record.dateEnd : '';
+    var dateText = (dateStart || dateEnd) ? (dateStart + '～' + dateEnd) : '';
+    var timeText = record ? record.time : '';
+    // <venues> が空の場合は <place> にフォールバック、両方空なら非表示。
+    var venuesText = record ? (record.venues || record.place || '') : '';
+
+    setRowVisible('footer-date-row', !!dateText);
+    setRowVisible('footer-time-row', !!timeText);
+    setRowVisible('footer-venues-row', !!venuesText);
+
+    if (dateText) setTextTruncatedToWidth(dateEl, dateText, maxWidthPx, '･･･');
+    if (timeText) setTextTruncatedToWidth(timeEl, timeText, maxWidthPx, '･･･');
+    if (venuesText) setTextTruncatedToWidth(venuesEl, venuesText, maxWidthPx, '･･･');
+  }
+
+  // <eventId> のWEB QRを表示する。QR画像自体はCMSがsync時に生成し、
+  // qr-map.json(eventId→画像パス)で解決できるため、テンプレート側での
+  // QR生成(URL組み立て含む)は行わない。
+  // 仕様: <statusWeb> が "1" の記事に限り表示(QR自体・「詳しくはWEBで」ラベルとも)。
+  function renderQr(record, qrMap) {
+    var qrEl = document.getElementById('footer-qr');
+    var labelEl = document.getElementById('footer-qr-label');
+    if (!qrEl) return;
+
+    var qrSrc = record ? resolveAsset(record.eventId, qrMap) : '';
+    var shouldShow = !!(record && record.statusWeb === '1' && qrSrc);
+    if (!shouldShow) {
+      qrEl.src = '';
+      qrEl.style.display = 'none';
+      if (labelEl) labelEl.style.display = 'none';
+      return;
+    }
+
+    qrEl.style.display = '';
+    if (labelEl) labelEl.style.display = '';
+    qrEl.src = qrSrc;
+  }
+
+  function renderRecord(record, assetsMap, qrMap) {
+    renderImage(record, assetsMap);
+    renderTitle(record);
+    renderBody(record);
+    renderFooter(record);
+    renderQr(record, qrMap);
   }
 
   function getResumeId() {
@@ -197,10 +318,10 @@
     }
   }
 
-  function startSlideshow(records, assetsMap) {
+  // 記事IDの大きい順に放映(仕様書通り)。1記事15秒で、末尾まで来たら先頭に戻る。
+  function startSlideshow(records, assetsMap, qrMap) {
     if (!records.length) {
-      renderSlide(slideEls[0], null, assetsMap);
-      slideEls[0].classList.add('is-active');
+      renderRecord(null, assetsMap, qrMap);
       return;
     }
 
@@ -213,35 +334,38 @@
 
     function showNext() {
       var record = records[current];
-      var nextEl = slideEls[(activeIndex + 1) % 2];
-      var curEl = slideEls[activeIndex];
-      renderSlide(nextEl, record, assetsMap);
-      nextEl.classList.add('is-active');
-      curEl.classList.remove('is-active');
-      activeIndex = (activeIndex + 1) % 2;
+      renderRecord(record, assetsMap, qrMap);
       setResumeId(record.eventId);
       current = (current + 1) % records.length;
     }
 
     showNext();
-    setInterval(showNext, CONFIG.slideDurationMs);
+    if (records.length > 1) {
+      setInterval(showNext, CONFIG.slideDurationMs);
+    }
   }
 
   function loadAndRender(attempt) {
     return loadBundle().then(function (bundle) {
       var allRecords = buildRecords(bundle);
       var recordFilters = bundle.templateConfig.recordFilters;
-      var activeRecords = allRecords.filter(function (r) { return isRecordActive(r, recordFilters); });
-      startSlideshow(activeRecords, bundle.assetsMap);
+      // フィードはeventId昇順で並んでいるため、「記事IDの大きい順に放映」(仕様書)を
+      // 満たすには反転させる。
+      var activeRecords = allRecords
+        .filter(function (r) { return isRecordActive(r, recordFilters); })
+        .reverse();
+      startSlideshow(activeRecords, bundle.assetsMap, bundle.qrMap);
     }).catch(function (err) {
       if (attempt < CONFIG.dataLoadMaxRetries) {
         return new Promise(function (resolve) { setTimeout(resolve, CONFIG.dataLoadRetryDelayMs); })
           .then(function () { return loadAndRender(attempt + 1); });
       }
-      document.getElementById('ws-root').innerHTML =
-        '<div class="empty-state">データの読み込みに失敗しました: ' + escapeHtml(String(err && err.message || err)) + '</div>';
+      console.error('event feed load failed', err);
     });
   }
 
+  loadInlineSvgs();
+  renderClock();
+  setInterval(renderClock, 1000);
   loadAndRender(0);
 })();
