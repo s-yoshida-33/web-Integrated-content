@@ -248,23 +248,33 @@
   }
 
   // <shopLogo> を footer コンテナのショップロゴエリア(150x150)に描画する。
+  // データが無い場合はロゴを非表示にし、テキストエリアをロゴ分の領域まで拡張する。
   function renderShopLogo(record, assetsMap) {
     var el = document.getElementById('shop-logo');
-    if (!el) return;
-    el.src = record ? resolveAsset(record.shopLogo, assetsMap) : '';
+    var textBlock = document.getElementById('footer-text-block');
+    var logoSrc = record ? resolveAsset(record.shopLogo, assetsMap) : '';
+    var hasLogo = !!logoSrc;
+
+    if (el) {
+      el.style.display = hasLogo ? '' : 'none';
+      el.src = logoSrc;
+    }
+    if (textBlock) textBlock.classList.toggle('footer-text-block--expanded', !hasLogo);
+    return hasLogo;
   }
 
   // <shopName> / <dateStart>～<dateEnd> / <shopFloorsName>(空の場合は<shopFloorName>) を
-  // footerコンテナのテキストエリア(530x50 x3行)に描画する。
-  // 仕様: 1行のみ表示。ショップ名行はアイコン無しのため530px、日付・階数行は
-  // アイコン(32px)とgap(20px)を差し引いた478pxに収まらない場合、末尾を「･･･」に置き換える。
-  // データが無い項目は行ごと非表示にする。
-  function renderFooterText(record) {
+  // footerコンテナのテキストエリア(3行)に描画する。
+  // 仕様: 1行のみ表示。ショップ名行はアイコン無し、日付・階数行はアイコン(32px)とgap(20px)を
+  // 差し引いた幅に収まらない場合、末尾を「･･･」に置き換える。ロゴが無い場合はテキストエリアが
+  // 拡張される分、利用可能幅も広げる。データが無い項目は行ごと非表示にする。
+  function renderFooterText(record, hasLogo) {
     var nameEl = document.getElementById('shop-name');
     var dateEl = document.getElementById('shop-date');
     var floorEl = document.getElementById('shop-floor');
-    var nameMaxWidthPx = 530;
-    var iconRowMaxWidthPx = 530 - 32 - 20;
+    var rowWidthPx = hasLogo ? 530 : 700;
+    var nameMaxWidthPx = rowWidthPx;
+    var iconRowMaxWidthPx = rowWidthPx - 32 - 20;
 
     var nameText = record ? record.shopName : '';
     var dateStart = record ? record.dateStart : '';
@@ -309,8 +319,8 @@
     renderImage(record, assetsMap);
     renderTitle(record);
     renderBody(record);
-    renderShopLogo(record, assetsMap);
-    renderFooterText(record);
+    var hasLogo = renderShopLogo(record, assetsMap);
+    renderFooterText(record, hasLogo);
     renderQr(record, qrMap);
   }
 

@@ -175,8 +175,14 @@ html, body {
   flex-direction: column;
 }
 
+/* <shopLogo>が無い場合、ロゴ分の領域(左端20pxから)までテキストエリアを拡張する */
+.footer-text-block.footer-text-block--expanded {
+  left: 20px;
+  width: 700px;
+}
+
 .footer-text-area {
-  width: 530px;
+  width: 100%;
   height: 50px;
   display: flex;
   align-items: center;
