@@ -7,14 +7,20 @@
 </head>
 <body>
   <div id="ws-root">
-    <div class="container container-header" data-container="header"><span class="debug-tag">header 1920×90</span></div>
+    <div class="container container-header" data-container="header">
+      <span class="header-logo inline-svg" data-src="assets/tpl/AEON_MALL_logo.svg"></span>
+      <div class="header-clock-group">
+        <span class="header-clock-icon inline-svg" data-src="assets/tpl/current_time.svg"></span>
+        <span class="header-clock" id="header-clock"></span>
+      </div>
+    </div>
     <div class="container container-image" data-container="image"><span class="debug-tag">image 450×450</span></div>
     <div class="container container-eventlabel" data-container="eventlabel"><span class="debug-tag">label 1470×68</span></div>
     <div class="container container-body" data-container="body"><span class="debug-tag">body 810×382</span></div>
     <div class="container container-footer" data-container="footer"><span class="debug-tag">footer 660×382</span></div>
   </div>
-  <!-- コンテナ配置確認中のためtemplate.jsは一時的に無効化。要素配置・データ連携の段階で
-       縦型/横型の実装を踏まえて書き直して復帰させる -->
-  <!-- <script src="template.js"></script> -->
+  <!-- ヘッダー(ロゴ・現在時刻)のみ接続済み。他コンテナ実装時に対象フィールドと
+       複数レコードのローテーションを拡張する -->
+  <script src="template.js"></script>
 </body>
 </html>
