@@ -216,16 +216,48 @@
     el.innerHTML = lines.map(escapeHtml).join('<br>');
   }
 
+  // <shopLogo> を footer コンテナのショップロゴエリア(150x150)に描画する。
+  function renderShopLogo(record, assetsMap) {
+    var el = document.getElementById('shop-logo');
+    if (!el) return;
+    el.src = record ? resolveAsset(record.shopLogo, assetsMap) : '';
+  }
+
+  // <shopNewsId> のWEB QRを表示する。QR画像自体はCMSがsync時に生成し、
+  // qr-map.json(shopNewsId→画像パス)で解決できるため、テンプレート側での
+  // QR生成(URL組み立て含む)は行わない。
+  // 仕様: <statusWeb> が "1" の記事に限り表示(QR自体・「詳しくはWEBで」ラベルとも)。
+  function renderQr(record, qrMap) {
+    var qrEl = document.getElementById('footer-qr');
+    var labelEl = document.getElementById('footer-qr-label');
+    if (!qrEl) return;
+
+    var qrSrc = record ? resolveAsset(record.shopNewsId, qrMap) : '';
+    var shouldShow = !!(record && record.statusWeb === '1' && qrSrc);
+    if (!shouldShow) {
+      qrEl.src = '';
+      qrEl.style.display = 'none';
+      if (labelEl) labelEl.style.display = 'none';
+      return;
+    }
+
+    qrEl.style.display = '';
+    if (labelEl) labelEl.style.display = '';
+    qrEl.src = qrSrc;
+  }
+
   function loadAndRender(attempt) {
     return loadBundle().then(function (bundle) {
       var allRecords = buildRecords(bundle);
       var recordFilters = bundle.templateConfig.recordFilters;
       var activeRecords = allRecords.filter(function (r) { return isRecordActive(r, recordFilters); });
-      // TODO: フッター(店舗名・フロア等)実装後にスライドショー(複数レコードのローテーション)を追加する。
+      // TODO: 店舗名・フロア等の表示仕様確定後にスライドショー(複数レコードのローテーション)を追加する。
       // 現時点では各コンテナ単体の確認用に、先頭の有効レコードのみ描画する。
       renderImage(activeRecords[0], bundle.assetsMap);
       renderTitle(activeRecords[0]);
       renderBody(activeRecords[0]);
+      renderShopLogo(activeRecords[0], bundle.assetsMap);
+      renderQr(activeRecords[0], bundle.qrMap);
     }).catch(function (err) {
       if (attempt < CONFIG.dataLoadMaxRetries) {
         return new Promise(function (resolve) { setTimeout(resolve, CONFIG.dataLoadRetryDelayMs); })

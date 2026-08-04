@@ -145,3 +145,48 @@ html, body {
   height: 270px;
   padding: 40px;
 }
+
+.footer-info {
+  position: relative;
+  width: 880px;
+  height: 190px;
+  outline: 4px solid #FF006F;
+  box-sizing: border-box;
+  padding: 20px;
+}
+
+.shop-logo {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  width: 150px;
+  height: 150px;
+  display: block;
+  object-fit: contain;
+}
+
+.footer-qr {
+  position: absolute;
+  right: 20px;
+  bottom: 20px;
+  width: 120px;
+  height: 120px;
+  background: #fff;
+  outline: 2px solid #FF006F;
+  box-sizing: border-box;
+  display: block;
+  object-fit: contain;
+}
+
+.footer-qr-label {
+  position: absolute;
+  right: 20px;
+  bottom: 142px;
+  width: 120px;
+  text-align: center;
+  font-family: "Inter", "Noto Sans JP", "Yu Gothic", sans-serif;
+  font-weight: 900;
+  font-size: 16px;
+  color: #FF006F;
+  white-space: nowrap;
+}

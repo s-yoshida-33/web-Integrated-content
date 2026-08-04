@@ -28,10 +28,17 @@
       <h1 class="event-title" id="event-title"></h1>
       <p class="event-body" id="event-body"></p>
     </div>
-    <div class="container container-footer" data-container="footer"></div>
+    <div class="container container-footer" data-container="footer">
+      <div class="footer-info">
+        <img class="shop-logo" id="shop-logo" alt="">
+        <span class="footer-qr-label" id="footer-qr-label">詳しくはWEBで</span>
+        <img class="footer-qr" id="footer-qr" alt="">
+      </div>
+    </div>
   </div>
-  <!-- image/body(<photo1ThumbW1080>/<subTitle>/<bodyShort>)まで接続済み。
-       フッター(店舗名・フロア等)は別途仕様確定後に実装する。 -->
+  <!-- image/body(<photo1ThumbW1080>/<subTitle>/<bodyShort>)/フッター(<shopLogo>によるショップロゴ、
+       <shopNewsId>によるWEBQR)まで接続済み。WEB QRはCMSがsync時に生成するqr-map.json
+       (shopNewsId→QR画像パス)をそのまま利用する。 -->
   <script src="template.js"></script>
 </body>
 </html>
