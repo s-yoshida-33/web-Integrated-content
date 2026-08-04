@@ -3,6 +3,8 @@
 
   var CONFIG = {
     imageField: 'photo1ThumbW1080',
+    // 仕様書通り1記事15秒
+    slideDurationMs: 15000,
     // 再生ローテーションのタイミングでファイルが再展開中(書き込み途中)のことがあるため、
     // 読み込み・パース失敗時は少し待ってリトライする
     dataLoadMaxRetries: 5,
@@ -303,19 +305,65 @@
     qrEl.src = qrSrc;
   }
 
+  function renderRecord(record, assetsMap, qrMap) {
+    renderImage(record, assetsMap);
+    renderTitle(record);
+    renderBody(record);
+    renderShopLogo(record, assetsMap);
+    renderFooterText(record);
+    renderQr(record, qrMap);
+  }
+
+  function getResumeId() {
+    if (window.wonderFlow && typeof window.wonderFlow.getState === 'function') {
+      try { return window.wonderFlow.getState('last_shown_id'); } catch (e) { return null; }
+    }
+    return null;
+  }
+
+  function setResumeId(id) {
+    if (window.wonderFlow && typeof window.wonderFlow.setState === 'function') {
+      try { window.wonderFlow.setState('last_shown_id', id); } catch (e) { /* noop */ }
+    }
+  }
+
+  // 記事IDの大きい順に放映(仕様書通り)。1記事15秒で、末尾まで来たら先頭に戻る。
+  function startSlideshow(records, assetsMap, qrMap) {
+    if (!records.length) {
+      renderRecord(null, assetsMap, qrMap);
+      return;
+    }
+
+    var current = 0;
+    var resumeId = getResumeId();
+    if (resumeId) {
+      var idx = records.findIndex(function (r) { return r.shopNewsId === resumeId; });
+      if (idx >= 0) current = (idx + 1) % records.length;
+    }
+
+    function showNext() {
+      var record = records[current];
+      renderRecord(record, assetsMap, qrMap);
+      setResumeId(record.shopNewsId);
+      current = (current + 1) % records.length;
+    }
+
+    showNext();
+    if (records.length > 1) {
+      setInterval(showNext, CONFIG.slideDurationMs);
+    }
+  }
+
   function loadAndRender(attempt) {
     return loadBundle().then(function (bundle) {
       var allRecords = buildRecords(bundle);
       var recordFilters = bundle.templateConfig.recordFilters;
-      var activeRecords = allRecords.filter(function (r) { return isRecordActive(r, recordFilters); });
-      // TODO: 全コンテナ実装完了後にスライドショー(複数レコードのローテーション)を追加する。
-      // 現時点では各コンテナ単体の確認用に、先頭の有効レコードのみ描画する。
-      renderImage(activeRecords[0], bundle.assetsMap);
-      renderTitle(activeRecords[0]);
-      renderBody(activeRecords[0]);
-      renderShopLogo(activeRecords[0], bundle.assetsMap);
-      renderFooterText(activeRecords[0]);
-      renderQr(activeRecords[0], bundle.qrMap);
+      // フィードはshopNewsId昇順で並んでいるため、「記事IDの大きい順に放映」(仕様書)を
+      // 満たすには反転させる。
+      var activeRecords = allRecords
+        .filter(function (r) { return isRecordActive(r, recordFilters); })
+        .reverse();
+      startSlideshow(activeRecords, bundle.assetsMap, bundle.qrMap);
     }).catch(function (err) {
       if (attempt < CONFIG.dataLoadMaxRetries) {
         return new Promise(function (resolve) { setTimeout(resolve, CONFIG.dataLoadRetryDelayMs); })
