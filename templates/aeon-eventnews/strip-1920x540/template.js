@@ -1,6 +1,18 @@
 (function () {
   'use strict';
 
+  var CONFIG = {
+    imageField: 'photo1ThumbW1080',
+    // 再生ローテーションのタイミングでファイルが再展開中(書き込み途中)のことがあるため、
+    // 読み込み・パース失敗時は少し待ってリトライする
+    dataLoadMaxRetries: 5,
+    dataLoadRetryDelayMs: 600
+  };
+
+  function stripText(el) {
+    return el ? (el.textContent || '').trim() : '';
+  }
+
   // file:// で開かれる再生環境では fetch() が "Failed to fetch" で必ず失敗するため、
   // XMLHttpRequest にフォールバックする(file://では成功時も status が 0 になる点に注意)。
   function loadViaXHR(path) {
@@ -36,6 +48,105 @@
       .catch(function () { return loadViaXHR(path); });
   }
 
+  function fetchJson(path) {
+    return fetchText(path)
+      .then(function (text) { return JSON.parse(text); })
+      .catch(function () { return null; });
+  }
+
+  function evaluateXPath(doc, xpath) {
+    var result = doc.evaluate(xpath, doc, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
+    var nodes = [];
+    for (var i = 0; i < result.snapshotLength; i++) nodes.push(result.snapshotItem(i));
+    return nodes;
+  }
+
+  // 同名タグの入れ子(<item type="date">内の<dateStart>等)を拾わないよう直下の子要素だけを見る
+  function directChildText(recordEl, tagName) {
+    for (var i = 0; i < recordEl.children.length; i++) {
+      var c = recordEl.children[i];
+      if (c.tagName === tagName) return stripText(c);
+    }
+    return '';
+  }
+
+  function parseDate(value) {
+    if (!value) return null;
+    var d = new Date(value.trim().replace(' ', 'T'));
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  function loadBundle() {
+    return Promise.all([
+      fetchJson('template.json'),
+      fetchJson('assets-map.json'),
+      fetchJson('qr-map.json')
+    ]).then(function (results) {
+      var templateConfig = results[0] || {};
+      var assetsMap = results[1] || {};
+      var qrMap = results[2] || {};
+      var dataFile = templateConfig.dataFile || 'data.xml';
+      return fetchText(dataFile).then(function (raw) {
+        return { templateConfig: templateConfig, assetsMap: assetsMap, qrMap: qrMap, dataFile: dataFile, raw: raw };
+      });
+    });
+  }
+
+  function buildRecords(bundle) {
+    var templateConfig = bundle.templateConfig;
+    var recordPath = templateConfig.recordPath || '//data/item';
+    var fields = templateConfig.fields || [];
+    var sourcePaths = fields.map(function (f) { return f.sourcePath; });
+    if (sourcePaths.indexOf('eventId') === -1) sourcePaths.push('eventId');
+    if (sourcePaths.indexOf(CONFIG.imageField) === -1) sourcePaths.push(CONFIG.imageField);
+
+    var records = [];
+    if (/\.xml$/i.test(bundle.dataFile)) {
+      var doc = new DOMParser().parseFromString(bundle.raw, 'application/xml');
+      if (doc.getElementsByTagName('parsererror').length) {
+        throw new Error('data.xml の解析に失敗しました(不正なXML)');
+      }
+      evaluateXPath(doc, recordPath).forEach(function (node) {
+        var raw = {};
+        sourcePaths.forEach(function (p) { raw[p] = directChildText(node, p); });
+        records.push(raw);
+      });
+    } else {
+      var segments = recordPath.replace(/^\/+/, '').split('/').filter(Boolean);
+      var cursor = JSON.parse(bundle.raw);
+      segments.forEach(function (seg) { if (cursor) cursor = cursor[seg]; });
+      (Array.isArray(cursor) ? cursor : []).forEach(function (item) {
+        var raw = {};
+        sourcePaths.forEach(function (p) { raw[p] = item[p] != null ? String(item[p]) : ''; });
+        records.push(raw);
+      });
+    }
+    return records;
+  }
+
+  // recordFilters が template.json にあれば汎用ロジックで評価。
+  // 未設定の場合は statusWeb=1 のみを既定ルールとする。
+  // (WEB連携コンテンツである以上、WEB非掲載の記事をサイネージ側だけ表示するのは
+  // 実態と合わないため。template.jsonのfieldsにstatusSignage/pubStart/pubEndが
+  // 含まれない構成にも対応する)
+  function isRecordActive(raw, recordFilters) {
+    if (recordFilters && recordFilters.length) {
+      return recordFilters.every(function (f) {
+        var value = raw[f.sourcePath];
+        if (f.op === 'eq') return value === f.value;
+        if (f.op === 'notPast') { var d = parseDate(value); return !d || d >= new Date(); }
+        if (f.op === 'notFuture') { var d = parseDate(value); return !d || d <= new Date(); }
+        return true;
+      });
+    }
+    return raw.statusWeb === '1';
+  }
+
+  function resolveAsset(rawValue, assetsMap) {
+    if (!rawValue || !assetsMap) return '';
+    return assetsMap[rawValue] || '';
+  }
+
   // ロゴ・アイコン等のテンプレート固有アセット(SVG)を <img src> ではなく
   // fetchでテキスト取得してインラインSVGとして注入する。
   // CMSのアセット配信がContent-Typeヘッダーを付けないことがあり、その場合
@@ -58,7 +169,34 @@
     el.textContent = pad(now.getHours()) + ':' + pad(now.getMinutes());
   }
 
+  // <photo1ThumbW1080> を image コンテナ(450x450)に描画する。
+  // 比率が1:1でない画像は object-fit:contain (style.css 側) で
+  // 枠内に収め、はみ出す分をクロップせず余白(白背景)として残す。
+  function renderImage(record, assetsMap) {
+    var el = document.getElementById('event-photo');
+    if (!el) return;
+    el.src = record ? resolveAsset(record[CONFIG.imageField], assetsMap) : '';
+  }
+
+  function loadAndRender(attempt) {
+    return loadBundle().then(function (bundle) {
+      var allRecords = buildRecords(bundle);
+      var recordFilters = bundle.templateConfig.recordFilters;
+      var activeRecords = allRecords.filter(function (r) { return isRecordActive(r, recordFilters); });
+      // TODO: 他コンテナ実装時にここへ複数レコードのローテーション(wonderFlowでのレジューム含む)を追加する。
+      // 現時点では image コンテナ単体の確認用に、先頭の有効レコードのみ描画する。
+      renderImage(activeRecords[0], bundle.assetsMap);
+    }).catch(function (err) {
+      if (attempt < CONFIG.dataLoadMaxRetries) {
+        return new Promise(function (resolve) { setTimeout(resolve, CONFIG.dataLoadRetryDelayMs); })
+          .then(function () { return loadAndRender(attempt + 1); });
+      }
+      console.error('event feed load failed', err);
+    });
+  }
+
   loadInlineSvgs();
   renderClock();
   setInterval(renderClock, 1000);
+  loadAndRender(0);
 })();
