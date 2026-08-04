@@ -155,4 +155,15 @@ html, body {
   left: 1260px;
   width: 660px;
   height: 382px;
+  padding: 20px 40px 20px 0;
+  border: none;
+}
+
+.footer-info {
+  position: relative;
+  width: 620px;
+  height: 342px;
+  outline: 4px solid #FF7700;
+  box-sizing: border-box;
+  padding: 20px;
 }
