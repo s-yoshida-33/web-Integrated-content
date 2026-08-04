@@ -79,13 +79,15 @@
   function loadBundle() {
     return Promise.all([
       fetchJson('template.json'),
-      fetchJson('assets-map.json')
+      fetchJson('assets-map.json'),
+      fetchJson('qr-map.json')
     ]).then(function (results) {
       var templateConfig = results[0] || {};
       var assetsMap = results[1] || {};
+      var qrMap = results[2] || {};
       var dataFile = templateConfig.dataFile || 'data.xml';
       return fetchText(dataFile).then(function (raw) {
-        return { templateConfig: templateConfig, assetsMap: assetsMap, dataFile: dataFile, raw: raw };
+        return { templateConfig: templateConfig, assetsMap: assetsMap, qrMap: qrMap, dataFile: dataFile, raw: raw };
       });
     });
   }
@@ -123,8 +125,10 @@
   }
 
   // recordFilters が template.json にあれば汎用ロジックで評価。
-  // このAEON EVENTNEWSの実データではrecordFiltersが未設定だったため、
-  // その場合は statusSignage=1 かつ公開期間内、という既定ルールを使う。
+  // 未設定の場合は statusWeb=1 のみを既定ルールとする。
+  // (template.jsonのfieldsからstatusSignage/pubStart/pubEndが削除されたため、
+  // これらに基づく判定は行えない。現在のマッピングではrole:filterはstatusWebと
+  // updateDateのみ)
   function isRecordActive(raw, recordFilters) {
     if (recordFilters && recordFilters.length) {
       return recordFilters.every(function (f) {
@@ -135,13 +139,7 @@
         return true;
       });
     }
-    if (raw.statusSignage !== '1') return false;
-    var now = new Date();
-    var start = parseDate(raw.pubStart);
-    var end = parseDate(raw.pubEnd);
-    if (start && now < start) return false;
-    if (end && now > end) return false;
-    return true;
+    return raw.statusWeb === '1';
   }
 
   function resolveAsset(rawValue, assetsMap) {
@@ -274,17 +272,19 @@
     if (venuesText) setTextTruncatedToWidth(venuesEl, venuesText, maxWidthPx, '･･･');
   }
 
-  // <eventId> からイベントページのWEB QRを生成する(URLベースは assets/tpl/mall-config.js 側の
-  // window.MALL_CONFIG.eventUrlBase で定義。テンプレート本体にモール固有URLの文字列を持たせない)。
+  // <eventId> のWEB QRを表示する。QR画像自体はCMSがsync時に生成し、
+  // qr-map.json(eventId→画像パス)で解決できるため、テンプレート側での
+  // QR生成(URL組み立て含む)は行わない。
   // 仕様: <statusWeb> が "1" の記事に限り表示(QR自体・「詳しくはWEBで」ラベルとも)。
-  function renderQr(record) {
+  function renderQr(record, qrMap) {
     var qrEl = document.getElementById('footer-qr');
     var labelEl = document.getElementById('footer-qr-label');
     if (!qrEl) return;
 
-    var shouldShow = !!(record && record.statusWeb === '1' && record.eventId);
+    var qrSrc = record ? resolveAsset(record.eventId, qrMap) : '';
+    var shouldShow = !!(record && record.statusWeb === '1' && qrSrc);
     if (!shouldShow) {
-      qrEl.innerHTML = '';
+      qrEl.src = '';
       qrEl.style.display = 'none';
       if (labelEl) labelEl.style.display = 'none';
       return;
@@ -292,13 +292,7 @@
 
     qrEl.style.display = '';
     if (labelEl) labelEl.style.display = '';
-
-    var urlBase = (window.MALL_CONFIG && window.MALL_CONFIG.eventUrlBase) || '';
-    var url = urlBase + record.eventId;
-    var qr = qrcode(0, 'M');
-    qr.addData(url);
-    qr.make();
-    qrEl.innerHTML = qr.createSvgTag({ cellSize: 4, scalable: true });
+    qrEl.src = qrSrc;
   }
 
   function loadAndRender(attempt) {
@@ -312,7 +306,7 @@
       renderTitle(activeRecords[0]);
       renderBody(activeRecords[0]);
       renderFooter(activeRecords[0]);
-      renderQr(activeRecords[0]);
+      renderQr(activeRecords[0], bundle.qrMap);
     }).catch(function (err) {
       if (attempt < CONFIG.dataLoadMaxRetries) {
         return new Promise(function (resolve) { setTimeout(resolve, CONFIG.dataLoadRetryDelayMs); })
