@@ -110,6 +110,16 @@ html, body {
   left: 450px;
   width: 1470px;
   height: 68px;
+  background: #FFCB5B;
+  border: none;
+}
+
+.eventlabel-svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1470px;
+  height: 68px;
 }
 
 .container-body {
