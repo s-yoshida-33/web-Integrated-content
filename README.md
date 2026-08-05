@@ -10,13 +10,11 @@ AEON MALL 堺北花田向け、`wonder-screen-cms-server` の webfeed 機能
 ```
 templates/
   aeon-eventnews/
-    portrait-1080x1920/   縦型 (9:16) フルスクリーン
-    landscape-1920x1080/  横型 (16:9) フルスクリーン
-    strip-1920x540/       層間 (横長・低高さ) バナー
+    responsive/        縦型 (1080x1920) / 横型 (1920x1080) 自動切替フルスクリーン
+    strip-1920x540/    層間 (横長・低高さ) バナー
   aeon-shopnews/
-    portrait-1080x1920/   縦型 (9:16) フルスクリーン
-    landscape-1920x1080/  横型 (16:9) フルスクリーン
-    strip-1920x540/       層間 (横長・低高さ) バナー
+    responsive/        縦型 (1080x1920) / 横型 (1920x1080) 自動切替フルスクリーン
+    strip-1920x540/    層間 (横長・低高さ) バナー
 ```
 
 各ディレクトリの中身がそのまま1つの Web Feed テンプレートに対応し、いずれも以下の構成です:
@@ -28,8 +26,23 @@ template.js  ← 固定ファイル名。データ取得〜描画〜切替を自
 assets/tpl/  ← ロゴ・アイコン・フォント等、テンプレート固有の静的アセット
 ```
 
-6テンプレートとも `template.js` の処理フロー・テキスト省略ロジック・CMS回避策は共通で、
+4テンプレートとも `template.js` の処理フロー・テキスト省略ロジック・CMS回避策は共通で、
 コンテナの寸法・配置・参照フィールドがコンテンツ種別・レイアウトごとに異なります。
+
+### 縦型・横型の自動切替(`responsive/`)
+
+`responsive/index.html` の `<head>` 内スクリプトが `window.innerWidth`/`innerHeight` の
+アスペクト比で縦型・横型を判定し、`<html>` 要素に `layout-portrait` / `layout-landscape`
+クラスを付与する。`style.css` 側は各コンテナの座標・サイズをこのクラスでスコープして
+出し分ける(縦型専用の `container-side` と横型専用の `container-eventlabel` は
+非アクティブ側を `display:none` にする)。DOM・アセットは縦横で共通のため、1つの
+Web Feed テンプレートを両方の解像度のゾーンに配置できる。
+
+**層間(`strip-1920x540/`)は対象外。** 配信ソフト上の解像度が横型と同じ 1920x1080 に
+なり(LEDコントローラが上半分 1920x540 のみを実際の表示に使う)、画面サイズだけでは
+横型と層間を区別できないため、現状は専用ディレクトリのまま個別運用する。CMS側で
+層間ゾーンを判別できる手段(配置URLへのクエリパラメータ付与など)が確認でき次第、
+`responsive/` に統合する。
 
 ## アップロード方法
 
@@ -44,7 +57,7 @@ CMS の Web Feed テンプレート編集画面(ファイルツリー)で、各�
 ## template.js の処理フロー(共通)
 
 サーバー側でのプレースホルダー置換は行われないため、`template.js` が実行時に以下を自前で行います
-(関数名は6テンプレートとも共通)。
+(関数名は4テンプレートとも共通)。
 
 1. **`loadBundle()`** — `template.json` / `assets-map.json` / `qr-map.json` / `data.xml`(または
    `template.json.dataFile` で指定されたファイル)を fetch。`fetch` が失敗する環境

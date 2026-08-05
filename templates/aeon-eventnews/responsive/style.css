@@ -12,50 +12,63 @@
   padding: 0;
 }
 
-/* <img src>ではなくfetch+innerHTMLでSVGを注入するため、内部の<svg>を
-   コンテナ(.header-logo/.header-clock-icon等)いっぱいに広げる */
-.inline-svg svg {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-
 html, body {
-  width: 1920px;
-  height: 1080px;
   overflow: hidden;
   background: #fff;
   font-family: "Noto Sans JP", "Yu Gothic", sans-serif;
 }
 
-#ws-root {
-  position: relative;
+html.layout-portrait, html.layout-portrait body {
+  width: 1080px;
+  height: 1920px;
+}
+
+html.layout-landscape, html.layout-landscape body {
   width: 1920px;
   height: 1080px;
+}
+
+#ws-root {
+  position: relative;
   background: #fff;
+}
+
+html.layout-portrait #ws-root {
+  width: 1080px;
+  height: 1920px;
+}
+
+html.layout-landscape #ws-root {
+  width: 1920px;
+  height: 1080px;
 }
 
 .container {
   position: absolute;
   box-sizing: border-box;
   background: #fff;
-  border: 2px solid #000;
 }
 
-.debug-tag {
-  position: absolute;
-  top: 8px;
-  left: 8px;
-  font-size: 16px;
-  color: #999;
+/* <img src>ではなくfetch+innerHTMLでSVGを注入するため、内部の<svg>を
+   コンテナ(.header-logo/.header-clock-icon/.footer-icon)いっぱいに広げる */
+.inline-svg svg {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 .container-header {
   top: 0;
   left: 0;
-  width: 1920px;
   height: 120px;
-  border: none;
+}
+
+html.layout-portrait .container-header {
+  width: 1080px;
+}
+
+html.layout-landscape .container-header {
+  width: 1920px;
 }
 
 .header-logo {
@@ -89,12 +102,53 @@ html, body {
   color: #000000;
 }
 
+/* container-side: 縦型でのみ表示する側面の縦書きラベル */
+html.layout-landscape .container-side {
+  display: none;
+}
+
+.container-side {
+  top: 120px;
+  left: 960px;
+  width: 120px;
+  height: 1800px;
+  background: #FFCB5B;
+}
+
+.side-label {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 120px;
+  height: 1800px;
+}
+
+/* container-eventlabel: 横型でのみ表示する横書きラベル */
+html.layout-portrait .container-eventlabel {
+  display: none;
+}
+
+.container-eventlabel {
+  top: 120px;
+  left: 960px;
+  width: 960px;
+  height: 120px;
+  background: #FFCB5B;
+}
+
+.eventlabel-svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 960px;
+  height: 120px;
+}
+
 .container-image {
   top: 120px;
   left: 0;
   width: 960px;
   height: 960px;
-  border: none;
   background: #FFF4E1;
 }
 
@@ -106,30 +160,20 @@ html, body {
   object-position: center;
 }
 
-.container-eventlabel {
-  top: 120px;
-  left: 960px;
-  width: 960px;
-  height: 120px;
-  background: #FFCB5B;
-  border: none;
-}
-
-.eventlabel-svg {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 960px;
-  height: 120px;
-}
-
 .container-body {
-  top: 240px;
-  left: 960px;
   width: 960px;
   height: 570px;
   padding: 40px;
-  border: none;
+}
+
+html.layout-portrait .container-body {
+  top: 1080px;
+  left: 0;
+}
+
+html.layout-landscape .container-body {
+  top: 240px;
+  left: 960px;
 }
 
 .event-title {
@@ -153,12 +197,19 @@ html, body {
 }
 
 .container-footer {
-  top: 810px;
-  left: 960px;
   width: 960px;
   height: 270px;
   padding: 40px;
-  border: none;
+}
+
+html.layout-portrait .container-footer {
+  top: 1650px;
+  left: 0;
+}
+
+html.layout-landscape .container-footer {
+  top: 810px;
+  left: 960px;
 }
 
 .footer-info {

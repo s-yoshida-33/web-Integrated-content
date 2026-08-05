@@ -2,8 +2,23 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<title>AEON SHOPNEWS - Portrait 1080x1920</title>
+<title>AEON SHOPNEWS - Responsive (Portrait 1080x1920 / Landscape 1920x1080)</title>
 <link rel="stylesheet" href="style.css">
+<script>
+  (function () {
+    'use strict';
+    // 縦横は解像度のアスペクト比で自動判定できるが、層間(1920x540)は配信ソフト上の
+    // 解像度が横型と同じ1920x1080になるため、このロジックだけでは判定できない
+    // (層間はCMS側の対応が確認できるまで別テンプレート(strip-1920x540)のまま運用する)。
+    function applyOrientation() {
+      var portrait = window.innerWidth < window.innerHeight;
+      document.documentElement.classList.toggle('layout-portrait', portrait);
+      document.documentElement.classList.toggle('layout-landscape', !portrait);
+    }
+    applyOrientation();
+    window.addEventListener('resize', applyOrientation);
+  })();
+</script>
 </head>
 <body>
   <div id="ws-root">
@@ -17,6 +32,13 @@
     <div class="container container-side" data-container="side">
       <svg class="side-label" viewBox="0 0 120 1800">
         <text x="60" y="900" transform="rotate(90 60 900)" text-anchor="middle" dominant-baseline="central"
+          font-family="Inter" font-weight="900" font-size="96" letter-spacing="9.6"
+          fill="#FFFFFF" stroke="#FF006F" stroke-width="12" paint-order="stroke fill">SHOP NEWS</text>
+      </svg>
+    </div>
+    <div class="container container-eventlabel" data-container="eventlabel">
+      <svg class="eventlabel-svg" viewBox="0 0 960 120">
+        <text x="480" y="60" text-anchor="middle" dominant-baseline="central"
           font-family="Inter" font-weight="900" font-size="96" letter-spacing="9.6"
           fill="#FFFFFF" stroke="#FF006F" stroke-width="12" paint-order="stroke fill">SHOP NEWS</text>
       </svg>
@@ -49,10 +71,13 @@
       </div>
     </div>
   </div>
-  <!-- image/body(<photo1ThumbW1080>/<subTitle>/<bodyShort>)/フッター(<shopLogo>によるショップロゴ、
-       <shopName>/<dateStart>~<dateEnd>/<shopFloorsName>もしくは<shopFloorName>のテキスト3行、
+  <!-- header/image/side(or eventlabel)/body/フッター(<shopLogo>によるショップロゴ、<shopName>/
+       <dateStart>~<dateEnd>/<shopFloorsName>もしくは<shopFloorName>のテキスト3行、
        <shopNewsId>によるWEBQR)まで接続済み。WEB QRはCMSがsync時に生成するqr-map.json
-       (shopNewsId→QR画像パス)をそのまま利用する。 -->
+       (shopNewsId→QR画像パス)をそのまま利用する。
+       レイアウトはhead内スクリプトが画面サイズから判定し、html要素にlayout-portrait/
+       layout-landscapeクラスを付与することで縦横のcontainer-side/container-eventlabelを
+       出し分ける(style.css参照)。 -->
   <script src="template.js"></script>
 </body>
 </html>
