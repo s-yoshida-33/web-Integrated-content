@@ -64,7 +64,7 @@ CMS の Web Feed テンプレート編集画面 (ファイルツリー) で、�
 3. **`isRecordActive()`** — `template.json.recordFilters` があればそれに従って評価。無い場合の既定ルールは
    **`statusWeb === "1"` のみ** (WEB連携コンテンツである以上、WEB非掲載の記事をサイネージ側だけ表示するのは実態に合わないため)。
 4. **`renderRecord()`** — 各コンテナの描画関数をまとめて呼び出し、1レコード分を反映する。
-5. **`startSlideshow()`** — 有効レコードを **記事IDの降順** に並べ替えたうえで、`CONFIG.slideDurationMs` (既定15秒) ごとに `renderRecord` を呼んでローテーション表示する。`window.wonderFlow.getState/setState('last_shown_id')` に前回表示したIDを保存し、再生再開時にその続きから表示する。
+5. **`startSlideshow()`** — 有効レコードを **`updateDate`が新しい順(同日の場合はIDの昇順)** に並べ替えたうえで、`CONFIG.slideDurationMs` (既定15秒) ごとに `renderRecord` を呼んでローテーション表示する。`window.wonderFlow.getState/setState('last_shown_id')` に前回表示したIDを保存し、再生再開時にその続きから表示する。
 
 `loadAndRender()` はこの一連の処理を実行し、失敗時は `CONFIG.dataLoadMaxRetries` 回まで
 `dataLoadRetryDelayMs` 間隔でリトライする (sync直後のファイル再展開中の読み込み失敗に対応するため)。
@@ -100,7 +100,7 @@ CMSが sync のたびに `qr-map.json`
 |---|---|---|
 | `eventId` | id | レジューム/スライドショーの記事識別、QR (`qr-map.json`) の参照キー |
 | `statusWeb` | filter | 有効レコード判定 (`"1"`のみ表示) |
-| `updateDate` | filter | CMS側の差分検知用 (テンプレート側では未使用) |
+| `updateDate` | filter | スライドショーの並び順(新しい順)判定に使用 |
 | `photo1ThumbW1080` | image | メイン画像 |
 | `subTitle` | text | タイトル |
 | `bodyShort` | text | 本文 |
@@ -138,7 +138,7 @@ CMSが sync のたびに `qr-map.json`
 | `shopNewsId` | id | レジューム/スライドショーの記事識別、QR (`qr-map.json`) の参照キー |
 | `shopId` | text | ショップ自体の識別子 (`template.json.urlTemplates.qr.template` で使われるが、テンプレート側は `qr-map.json` を `shopNewsId` で引くため未使用) |
 | `statusWeb` | filter | 有効レコード判定 (`"1"` のみ表示) |
-| `updateDate` | filter | CMS側の差分検知用 (テンプレート側では未使用) |
+| `updateDate` | filter | スライドショーの並び順(新しい順)判定に使用 |
 | `photo1ThumbW1080` | image | メイン画像 |
 | `shopLogo` | image | ショップロゴ画像 (フッターインフォエリア) |
 | `shopName` | text | ショップ名 (フッター1行目) |

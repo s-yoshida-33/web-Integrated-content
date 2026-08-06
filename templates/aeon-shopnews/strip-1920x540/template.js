@@ -78,6 +78,23 @@
     return isNaN(d.getTime()) ? null : d;
   }
 
+  // 日付部分のみのキーに変換する(時刻差は「同日」判定に影響させない)。
+  // 不正・空の場合は最も古い扱いとして末尾に回す。
+  function dateOnlyKey(d) {
+    return d ? (d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate()) : -1;
+  }
+
+  // <updateDate> が新しい順(降順)に並べ、同日であれば <shopNewsId> の昇順とする。
+  function compareForSlideshow(a, b) {
+    var keyA = dateOnlyKey(parseDate(a.updateDate));
+    var keyB = dateOnlyKey(parseDate(b.updateDate));
+    if (keyA !== keyB) return keyB - keyA;
+    // shopNewsIdはUUID形式のため数値比較ではなく文字列比較で昇順とする。
+    var idA = a.shopNewsId || '';
+    var idB = b.shopNewsId || '';
+    return idA < idB ? -1 : (idA > idB ? 1 : 0);
+  }
+
   function loadBundle() {
     return Promise.all([
       fetchJson('template.json'),
@@ -100,6 +117,7 @@
     var fields = templateConfig.fields || [];
     var sourcePaths = fields.map(function (f) { return f.sourcePath; });
     if (sourcePaths.indexOf('shopNewsId') === -1) sourcePaths.push('shopNewsId');
+    if (sourcePaths.indexOf('updateDate') === -1) sourcePaths.push('updateDate');
     if (sourcePaths.indexOf(CONFIG.imageField) === -1) sourcePaths.push(CONFIG.imageField);
 
     var records = [];
@@ -332,7 +350,7 @@
     }
   }
 
-  // 記事IDの大きい順に放映(仕様書通り)。1記事15秒で、末尾まで来たら先頭に戻る。
+  // <updateDate>が新しい順(同日なら<shopNewsId>昇順)に放映する。1記事15秒で、末尾まで来たら先頭に戻る。
   function startSlideshow(records, assetsMap, qrMap) {
     if (!records.length) {
       renderRecord(null, assetsMap, qrMap);
@@ -363,11 +381,10 @@
     return loadBundle().then(function (bundle) {
       var allRecords = buildRecords(bundle);
       var recordFilters = bundle.templateConfig.recordFilters;
-      // フィードはshopNewsId昇順で並んでいるため、「記事IDの大きい順に放映」(仕様書)を
-      // 満たすには反転させる。
+      // <updateDate>が新しいものから放映し、同日の場合は<shopNewsId>昇順とする。
       var activeRecords = allRecords
         .filter(function (r) { return isRecordActive(r, recordFilters); })
-        .reverse();
+        .sort(compareForSlideshow);
       startSlideshow(activeRecords, bundle.assetsMap, bundle.qrMap);
     }).catch(function (err) {
       if (attempt < CONFIG.dataLoadMaxRetries) {
