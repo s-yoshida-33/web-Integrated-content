@@ -63,6 +63,8 @@ CMS の Web Feed テンプレート編集画面 (ファイルツリー) で、�
 2. **`buildRecords()`** — `template.json.recordPath` (既定 `//data/item`) でレコードを抽出。`.xml` なら XPath (`document.evaluate`)、それ以外は JSON パスとして解釈する汎用実装。
 3. **`isRecordActive()`** — `template.json.recordFilters` があればそれに従って評価。無い場合の既定ルールは
    **`statusWeb === "1"` のみ** (WEB連携コンテンツである以上、WEB非掲載の記事をサイネージ側だけ表示するのは実態に合わないため)。
+   これとは別に、**`statusSignage === "0"` のレコードは他の判定によらず常に除外する**
+   (「明示的に非表示にしたい」という意思表示のみを汲み取るため。`"1"`・空欄(未設定)は除外しない)。
 4. **`renderRecord()`** — 各コンテナの描画関数をまとめて呼び出し、1レコード分を反映する。
 5. **`startSlideshow()`** — 有効レコードを **`updateDate`が新しい順(同日の場合はIDの昇順)** に並べ替えたうえで、`CONFIG.slideDurationMs` (既定15秒) ごとに `renderRecord` を呼んでローテーション表示する。`window.wonderFlow.getState/setState('last_shown_id')` に前回表示したIDを保存し、再生再開時にその続きから表示する。
 
@@ -100,6 +102,7 @@ CMSが sync のたびに `qr-map.json`
 |---|---|---|
 | `eventId` | id | レジューム/スライドショーの記事識別、QR (`qr-map.json`) の参照キー |
 | `statusWeb` | filter | 有効レコード判定 (`"1"`のみ表示) |
+| `statusSignage` | filter | サイネージ非表示指定 (`"0"`のみ非表示。`"1"`・空欄は表示) |
 | `updateDate` | filter | スライドショーの並び順(新しい順)判定に使用 |
 | `photo1ThumbW1080` | image | メイン画像 |
 | `subTitle` | text | タイトル |
@@ -138,6 +141,7 @@ CMSが sync のたびに `qr-map.json`
 | `shopNewsId` | id | レジューム/スライドショーの記事識別、QR (`qr-map.json`) の参照キー |
 | `shopId` | text | ショップ自体の識別子 (`template.json.urlTemplates.qr.template` で使われるが、テンプレート側は `qr-map.json` を `shopNewsId` で引くため未使用) |
 | `statusWeb` | filter | 有効レコード判定 (`"1"` のみ表示) |
+| `statusSignage` | filter | サイネージ非表示指定 (`"0"`のみ非表示。`"1"`・空欄は表示) |
 | `updateDate` | filter | スライドショーの並び順(新しい順)判定に使用 |
 | `photo1ThumbW1080` | image | メイン画像 |
 | `shopLogo` | image | ショップロゴ画像 (フッターインフォエリア) |

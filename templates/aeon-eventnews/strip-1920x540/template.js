@@ -118,6 +118,7 @@
     var sourcePaths = fields.map(function (f) { return f.sourcePath; });
     if (sourcePaths.indexOf('eventId') === -1) sourcePaths.push('eventId');
     if (sourcePaths.indexOf('updateDate') === -1) sourcePaths.push('updateDate');
+    if (sourcePaths.indexOf('statusSignage') === -1) sourcePaths.push('statusSignage');
     if (sourcePaths.indexOf(CONFIG.imageField) === -1) sourcePaths.push(CONFIG.imageField);
 
     var records = [];
@@ -146,10 +147,10 @@
 
   // recordFilters が template.json にあれば汎用ロジックで評価。
   // 未設定の場合は statusWeb=1 のみを既定ルールとする。
-  // (WEB連携コンテンツである以上、WEB非掲載の記事をサイネージ側だけ表示するのは
-  // 実態と合わないため。template.jsonのfieldsにstatusSignage/pubStart/pubEndが
-  // 含まれない構成にも対応する)
+  // <statusSignage>が"0"の場合は、他の判定によらず「明示的に非表示にしたい」という
+  // 意思表示として除外する。"1"・空欄(未設定)の場合はこの判定では除外しない。
   function isRecordActive(raw, recordFilters) {
+    if (raw.statusSignage === '0') return false;
     if (recordFilters && recordFilters.length) {
       return recordFilters.every(function (f) {
         var value = raw[f.sourcePath];
