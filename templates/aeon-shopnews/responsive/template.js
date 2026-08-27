@@ -8,7 +8,10 @@
     // 再生ローテーションのタイミングでファイルが再展開中(書き込み途中)のことがあるため、
     // 読み込み・パース失敗時は少し待ってリトライする
     dataLoadMaxRetries: 5,
-    dataLoadRetryDelayMs: 600
+    dataLoadRetryDelayMs: 600,
+    // Gido本体からの{type:'gido:activate'}を待つが、Gido外(スタンドアロン確認等)では
+    // 届かないため、これだけ待っても届かなければ自動的にスライドショーを開始する
+    activateFallbackMs: 1500
   };
 
   function stripText(el) {
@@ -384,6 +387,49 @@
     }
   }
 
+  // Gido側のプリロード機構により、実際に画面へ前面化されるより前にiframeのsrcが
+  // 確定してtemplate.jsが動き出すため、データ読み込み完了と同時にstartSlideshowを
+  // 呼ぶと記事ローテーションのタイマーが前倒しで進んでしまい、90秒の枠境界がずれる
+  // (Gido Issue #36)。これを避けるため、
+  //   (a) データ読み込み完了(dataReady)
+  //   (b) Gido本体からの前面化合図{type:'gido:activate'}受信(activated)
+  // の両方が揃って初めてstartSlideshowを呼ぶようにする。順序はどちらが先でもよい。
+  var activation = { dataReady: false, activated: false, started: false, pendingArgs: null };
+  var activateFallbackTimer = null;
+
+  function tryStartSlideshow() {
+    if (activation.started || !activation.dataReady || !activation.activated) return;
+    activation.started = true;
+    var args = activation.pendingArgs;
+    startSlideshow(args.records, args.assetsMap, args.qrMap);
+  }
+
+  function markDataReady(records, assetsMap, qrMap) {
+    activation.dataReady = true;
+    activation.pendingArgs = { records: records, assetsMap: assetsMap, qrMap: qrMap };
+    tryStartSlideshow();
+  }
+
+  function activate() {
+    if (activateFallbackTimer !== null) {
+      clearTimeout(activateFallbackTimer);
+      activateFallbackTimer = null;
+    }
+    if (activation.activated) return;
+    activation.activated = true;
+    tryStartSlideshow();
+  }
+
+  // Gido本体(親フレーム)からの前面化合図のみを受け付ける。
+  window.addEventListener('message', function (event) {
+    if (event.source !== window.parent) return;
+    if (event.data && event.data.type === 'gido:activate') activate();
+  });
+
+  // Gido外(python -m http.server等でのスタンドアロン確認時)は上記メッセージが
+  // 絶対に届かないため、一定時間待っても届かなければ自動的に開始する。
+  activateFallbackTimer = setTimeout(activate, CONFIG.activateFallbackMs);
+
   function loadAndRender(attempt) {
     return loadBundle().then(function (bundle) {
       var allRecords = buildRecords(bundle);
@@ -392,7 +438,7 @@
       var activeRecords = allRecords
         .filter(function (r) { return isRecordActive(r, recordFilters); })
         .sort(compareForSlideshow);
-      startSlideshow(activeRecords, bundle.assetsMap, bundle.qrMap);
+      markDataReady(activeRecords, bundle.assetsMap, bundle.qrMap);
     }).catch(function (err) {
       if (attempt < CONFIG.dataLoadMaxRetries) {
         return new Promise(function (resolve) { setTimeout(resolve, CONFIG.dataLoadRetryDelayMs); })
@@ -406,4 +452,12 @@
   renderClock();
   setInterval(renderClock, 1000);
   loadAndRender(0);
+
+  // 初期化完了・{type:'gido:activate'}の合図待ちが可能になったことをGido本体へ通知する。
+  // Gido側のorigin(tauri://localhost等、環境により変わる)をこちらから特定できないため
+  // targetOriginは'*'とする(受信側であるGidoが送信元origin/window.parentを厳密に
+  // チェックする設計になっている)。
+  try {
+    window.parent.postMessage({ type: 'gido:ready' }, '*');
+  } catch (e) { /* noop */ }
 })();
