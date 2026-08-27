@@ -327,17 +327,33 @@
     renderQr(record, qrMap);
   }
 
+  // WonderScreen純正プレイヤーはwindow.wonderFlowで状態永続化APIを提供するが、
+  // Gido等の他プレイヤーはこれを提供しないため常にresumeIdがnullとなり、
+  // iframe再生成(90秒枠が回ってくるたび)のたびに先頭から再開してしまい、
+  // 全記事を巡回できない不具合があった。同一オリジン(asset.localhost)内で永続化される
+  // localStorageをフォールバックとして使い、wonderFlowが無い環境でも再開位置を保持する。
+  // クエリ文字列(キャッシュバスター)の影響を受けないlocation.pathnameでキーを
+  // スコープし、別のWEB連携コンテンツ(別テンプレート・別コンテンツ種別)の状態と
+  // 混ざらないようにする。
+  function resumeStorageKey() {
+    return 'gido-webfeed:last_shown_id:' + location.pathname;
+  }
+
   function getResumeId() {
     if (window.wonderFlow && typeof window.wonderFlow.getState === 'function') {
-      try { return window.wonderFlow.getState('last_shown_id'); } catch (e) { return null; }
+      try {
+        var v = window.wonderFlow.getState('last_shown_id');
+        if (v) return v;
+      } catch (e) { /* フォールバックへ */ }
     }
-    return null;
+    try { return window.localStorage.getItem(resumeStorageKey()); } catch (e) { return null; }
   }
 
   function setResumeId(id) {
     if (window.wonderFlow && typeof window.wonderFlow.setState === 'function') {
       try { window.wonderFlow.setState('last_shown_id', id); } catch (e) { /* noop */ }
     }
+    try { window.localStorage.setItem(resumeStorageKey(), id); } catch (e) { /* noop */ }
   }
 
   // <updateDate>が新しい順(同日なら<eventId>昇順)に放映する。1記事15秒で、末尾まで来たら先頭に戻る。
