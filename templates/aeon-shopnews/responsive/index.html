@@ -17,6 +17,10 @@
     }
     applyOrientation();
     window.addEventListener('resize', applyOrientation);
+    // iframeの文書解析開始時点(<head>実行時)ではまだ親側のiframeサイズ確定前の値
+    // (ブラウザのデフォルトiframeサイズ=横長)を読んでしまうことがあるため、
+    // レイアウト確定後のDOMContentLoaded時にも再判定する
+    document.addEventListener('DOMContentLoaded', applyOrientation);
   })();
 </script>
 </head>
