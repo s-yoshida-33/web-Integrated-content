@@ -422,9 +422,14 @@
     if (event.data && event.data.type === 'gido:activate') activate();
   });
 
-  // Gido外(python -m http.server等でのスタンドアロン確認時)は上記メッセージが
-  // 絶対に届かないため、一定時間待っても届かなければ自動的に開始する。
-  activateFallbackTimer = setTimeout(activate, CONFIG.activateFallbackMs);
+  // フォールバックは、iframe化されていない(スタンドアロン確認時、python -m http.server等で
+  // 直接開いた場合)、すなわちwindow.parent === windowの場合にのみ動作させる。
+  // 親フレームに埋め込まれている(Gido等)場合は、本物のgido:activateだけを待つ
+  // (埋め込み時にもこれを無条件で動かすと、Gidoのプリロードリード時間(約15秒)より
+  // フォールバック(1.5秒)の方が先に発火してしまい、postMessage同期が実質無効化される)。
+  if (window.parent === window) {
+    activateFallbackTimer = setTimeout(activate, CONFIG.activateFallbackMs);
+  }
 
   function loadAndRender(attempt) {
     return loadBundle().then(function (bundle) {
