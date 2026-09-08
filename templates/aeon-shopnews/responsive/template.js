@@ -177,19 +177,51 @@
     });
   }
 
-  // 1行あたりの最大文字数×最大行数を超える場合、末尾を省略記号に置き換えて
-  // (省略記号を含めた合計文字数が上限に収まるようにして) maxLines 行に分割する。
-  function wrapByCharCount(text, maxCharsPerLine, maxLines, ellipsis) {
-    var maxTotal = maxCharsPerLine * maxLines;
-    var t = text || '';
-    if (t.length > maxTotal) {
-      t = t.slice(0, maxTotal - ellipsis.length) + ellipsis;
+  // 全角/半角混在の文章だと文字数ベースの折り返しでは行ごとの実際の見た目の長さが
+  // 不揃いになり不自然な余白が生じるため、文字数は仕様書上の目安に留め、実装では
+  // 実測描画幅(px)ベースで1行に収まる最大文字数をその都度求めて折り返す
+  // (footerのsetTextTruncatedToWidthと同じ考え方の複数行版)。elは
+  // white-space:nowrapが前提(1行分の候補文字列の実際の描画幅がそのままel自身の
+  // 幅として測れる)。maxLines行を超える場合は最終行を省略記号で切り詰める。
+  function wrapByWidth(el, text, maxLines, ellipsis) {
+    var full = text || '';
+    if (!full) { el.innerHTML = ''; return; }
+
+    var maxWidthPx = el.clientWidth;
+
+    // start位置から、末尾にsuffixを付けた状態でmaxWidthPxに収まる最大文字数を2分探索する。
+    function maxFitLength(start, suffix) {
+      var lo = 0;
+      var hi = full.length - start;
+      while (lo < hi) {
+        var mid = Math.ceil((lo + hi) / 2);
+        el.textContent = full.slice(start, start + mid) + suffix;
+        if (el.getBoundingClientRect().width <= maxWidthPx) {
+          lo = mid;
+        } else {
+          hi = mid - 1;
+        }
+      }
+      return lo;
     }
+
     var lines = [];
-    for (var i = 0; i < t.length; i += maxCharsPerLine) {
-      lines.push(t.slice(i, i + maxCharsPerLine));
+    var pos = 0;
+    for (var i = 0; i < maxLines && pos < full.length; i++) {
+      var remaining = full.length - pos;
+      var fitLen = maxFitLength(pos, '');
+      if (fitLen < remaining && i === maxLines - 1) {
+        // 最終許容行に全文が収まりきらない: 省略記号付きで収まる長さに切り詰めて打ち切る
+        fitLen = maxFitLength(pos, ellipsis);
+        lines.push(full.slice(pos, pos + fitLen) + ellipsis);
+        break;
+      }
+      if (fitLen === 0) fitLen = 1; // 極端に幅が狭い場合の無限ループ防止
+      lines.push(full.slice(pos, pos + fitLen));
+      pos += fitLen;
     }
-    return lines;
+
+    el.innerHTML = lines.map(escapeHtml).join('<br>');
   }
 
   // footerの1行テキスト用: 文字数ではなく実際の描画幅(px)で判定し、
@@ -253,21 +285,21 @@
   }
 
   // <subTitle> を body コンテナのタイトルに描画する。
-  // 仕様: 1行15文字以内・最大2行、文字数オーバー時は末尾を「･･･」に置き換える。
+  // 仕様: 1行15文字程度を目安に最大2行。行に収まらない場合は末尾を「･･･」に置き換える
+  // (実際の折り返しは実測描画幅ベース。wrapByWidthのコメント参照)。
   function renderTitle(record) {
     var el = document.getElementById('event-title');
     if (!el) return;
-    var lines = wrapByCharCount(record ? record.subTitle : '', 15, 2, '･･･');
-    el.innerHTML = lines.map(escapeHtml).join('<br>');
+    wrapByWidth(el, record ? record.subTitle : '', 2, '･･･');
   }
 
   // <bodyShort> を body コンテナの本文に描画する。
-  // 仕様: 1行25文字以内・最大5行、文字数オーバー時は末尾を「･･･」に置き換える。
+  // 仕様: 1行25文字程度を目安に最大5行。行に収まらない場合は末尾を「･･･」に置き換える
+  // (実際の折り返しは実測描画幅ベース。wrapByWidthのコメント参照)。
   function renderBody(record) {
     var el = document.getElementById('event-body');
     if (!el) return;
-    var lines = wrapByCharCount(record ? record.bodyShort : '', 25, 5, '･･･');
-    el.innerHTML = lines.map(escapeHtml).join('<br>');
+    wrapByWidth(el, record ? record.bodyShort : '', 5, '･･･');
   }
 
   // <shopLogo> を footer コンテナのショップロゴエリア(150x150)に描画する。
