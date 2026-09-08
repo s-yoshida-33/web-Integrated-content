@@ -177,12 +177,39 @@
     });
   }
 
+  // 幅測定用の非表示ルーラー要素(1個を使い回す)。position:absolute+visibility:hiddenで
+  // レイアウトに影響させず、対象要素と同じフォント設定を都度コピーして測定する。
+  var measureRuler = null;
+  function measureTextWidth(refEl, text) {
+    if (!measureRuler) {
+      measureRuler = document.createElement('span');
+      measureRuler.style.position = 'absolute';
+      measureRuler.style.visibility = 'hidden';
+      measureRuler.style.whiteSpace = 'nowrap';
+      measureRuler.style.left = '-99999px';
+      measureRuler.style.top = '0';
+      document.body.appendChild(measureRuler);
+    }
+    var cs = window.getComputedStyle(refEl);
+    measureRuler.style.fontFamily = cs.fontFamily;
+    measureRuler.style.fontSize = cs.fontSize;
+    measureRuler.style.fontWeight = cs.fontWeight;
+    measureRuler.style.fontStyle = cs.fontStyle;
+    measureRuler.style.letterSpacing = cs.letterSpacing;
+    measureRuler.textContent = text;
+    return measureRuler.getBoundingClientRect().width;
+  }
+
   // 全角/半角混在の文章だと文字数ベースの折り返しでは行ごとの実際の見た目の長さが
   // 不揃いになり不自然な余白が生じるため、文字数は仕様書上の目安に留め、実装では
   // 実測描画幅(px)ベースで1行に収まる最大文字数をその都度求めて折り返す
-  // (footerのsetTextTruncatedToWidthと同じ考え方の複数行版)。elは
-  // white-space:nowrapが前提(1行分の候補文字列の実際の描画幅がそのままel自身の
-  // 幅として測れる)。maxLines行を超える場合は最終行を省略記号で切り詰める。
+  // (footerのsetTextTruncatedToWidthと同じ考え方の複数行版)。
+  // event-title/event-bodyは(footerのテキストと異なり)flexアイテムではない通常の
+  // block要素で、width:autoが常にコンテナ幅を返し内容量に応じて縮まないため、
+  // 対象要素自体のgetBoundingClientRect().widthを直接測ることはできない
+  // (常にコンテナ幅と同じ値が返り、どんな長さの文字列でも「収まる」と誤判定してしまう)。
+  // そのため非表示のルーラー要素(measureTextWidth)で候補文字列だけを測る。
+  // maxLines行を超える場合は最終行を省略記号で切り詰める。
   function wrapByWidth(el, text, maxLines, ellipsis) {
     var full = text || '';
     if (!full) { el.innerHTML = ''; return; }
@@ -195,8 +222,8 @@
       var hi = full.length - start;
       while (lo < hi) {
         var mid = Math.ceil((lo + hi) / 2);
-        el.textContent = full.slice(start, start + mid) + suffix;
-        if (el.getBoundingClientRect().width <= maxWidthPx) {
+        var w = measureTextWidth(el, full.slice(start, start + mid) + suffix);
+        if (w <= maxWidthPx) {
           lo = mid;
         } else {
           hi = mid - 1;
