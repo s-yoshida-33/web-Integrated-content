@@ -431,18 +431,42 @@
   }
 
   // <updateDate>が新しい順(同日なら<shopNewsId>昇順)に放映する。1記事15秒で、末尾まで来たら先頭に戻る。
-  function startSlideshow(records, assetsMap, qrMap) {
-    if (!records.length) {
-      renderRecord(null, assetsMap, qrMap);
-      return;
-    }
-
-    var current = 0;
+  // 最初に表示する記事は、前回最後に表示した記事(再開位置)の次。
+  function firstRecordIndex(records) {
     var resumeId = getResumeId();
-    if (resumeId) {
-      var idx = records.findIndex(function (r) { return r.shopNewsId === resumeId; });
-      if (idx >= 0) current = (idx + 1) % records.length;
-    }
+    if (!resumeId) return 0;
+    var idx = records.findIndex(function (r) { return r.shopNewsId === resumeId; });
+    return idx >= 0 ? (idx + 1) % records.length : 0;
+  }
+
+  // 描画済みの画像(表示中のもの)を、デコードまで済ませる。decode()に失敗しても(画像が
+  // 壊れている等)描画は続けるため、失敗は無視する。
+  function decodeRenderedImages() {
+    var imgs = Array.prototype.slice.call(document.querySelectorAll('img'));
+    return Promise.all(imgs.map(function (img) {
+      if (!img.getAttribute('src') || img.style.display === 'none' || typeof img.decode !== 'function') {
+        return null;
+      }
+      return img.decode().catch(function () { /* noop */ });
+    }));
+  }
+
+  // 記事ローテーションを始める。1記事目(startIndex)は事前に描画済み(prerenderFirstRecord)。
+  // elapsedMs は、プレイヤーの予定上このコンテンツが既に進んでいるはずの時間(優先度の高い
+  // 割り込みの後に途中から表示される場合など)。その分だけ記事を進め、最初の記事の表示時間を
+  // 短くして、以降の切り替わりを予定どおりの位置に揃える。通常の切り替え(Gido含む)では0。
+  function startSlideshow(records, assetsMap, qrMap, startIndex, elapsedMs) {
+    if (!records.length) return;
+
+    var skip = Math.floor(elapsedMs / CONFIG.slideDurationMs);
+    var offsetInSlideMs = elapsedMs % CONFIG.slideDurationMs;
+    var current = (startIndex + skip) % records.length;
+    // 途中から始める場合だけ、事前に描画した記事から描画し直す。
+    if (skip > 0) renderRecord(records[current], assetsMap, qrMap);
+    setResumeId(records[current].shopNewsId);
+
+    if (records.length <= 1) return;
+    current = (current + 1) % records.length;
 
     function showNext() {
       var record = records[current];
@@ -451,49 +475,56 @@
       current = (current + 1) % records.length;
     }
 
-    showNext();
-    if (records.length > 1) {
+    setTimeout(function () {
+      showNext();
       setInterval(showNext, CONFIG.slideDurationMs);
-    }
+    }, CONFIG.slideDurationMs - offsetInSlideMs);
   }
 
-  // Gido側のプリロード機構により、実際に画面へ前面化されるより前にiframeのsrcが
-  // 確定してtemplate.jsが動き出すため、データ読み込み完了と同時にstartSlideshowを
-  // 呼ぶと記事ローテーションのタイマーが前倒しで進んでしまい、90秒の枠境界がずれる
-  // (Gido Issue #36)。これを避けるため、
-  //   (a) データ読み込み完了(dataReady)
-  //   (b) Gido本体からの前面化合図{type:'gido:activate'}受信(activated)
-  // の両方が揃って初めてstartSlideshowを呼ぶようにする。順序はどちらが先でもよい。
-  var activation = { dataReady: false, activated: false, started: false, pendingArgs: null };
+  // プレイヤー側のプリロード機構により、実際に画面へ前面化されるより前にiframeのsrcが
+  // 確定してtemplate.jsが動き出すため、データ読み込み完了と同時に記事ローテーションの
+  // タイマーを始めると前倒しで進んでしまい、枠の境界がずれる(Gido Issue #36)。これを避けるため、
+  //   (a) データ読み込み完了と、1記事目の事前描画・画像デコード(dataReady)
+  //   (b) プレイヤーからの前面化合図{type:'gido:activate'}受信(activated)
+  // の両方が揃って初めてタイマーを始める。順序はどちらが先でもよい。
+  // 1記事目の描画は(a)の時点で済ませておき、前面化の瞬間にテキスト・画像がパラパラと
+  // 描画されるのを防ぐ(web-Integrated-content #10)。再開位置(last_shown_id)は、実際に
+  // 前面化された時点で記録する(前面化されないまま破棄された場合は進めない)。
+  var activation = { dataReady: false, activated: false, started: false, elapsedMs: 0, pendingArgs: null };
   var activateFallbackTimer = null;
 
   function tryStartSlideshow() {
     if (activation.started || !activation.dataReady || !activation.activated) return;
     activation.started = true;
     var args = activation.pendingArgs;
-    startSlideshow(args.records, args.assetsMap, args.qrMap);
+    startSlideshow(args.records, args.assetsMap, args.qrMap, args.startIndex, activation.elapsedMs);
   }
 
   function markDataReady(records, assetsMap, qrMap) {
-    activation.dataReady = true;
-    activation.pendingArgs = { records: records, assetsMap: assetsMap, qrMap: qrMap };
-    tryStartSlideshow();
+    var startIndex = records.length ? firstRecordIndex(records) : 0;
+    renderRecord(records.length ? records[startIndex] : null, assetsMap, qrMap);
+    activation.pendingArgs = { records: records, assetsMap: assetsMap, qrMap: qrMap, startIndex: startIndex };
+    decodeRenderedImages().then(function () {
+      activation.dataReady = true;
+      tryStartSlideshow();
+    });
   }
 
-  function activate() {
+  function activate(elapsedMs) {
     if (activateFallbackTimer !== null) {
       clearTimeout(activateFallbackTimer);
       activateFallbackTimer = null;
     }
     if (activation.activated) return;
     activation.activated = true;
+    activation.elapsedMs = (typeof elapsedMs === 'number' && isFinite(elapsedMs) && elapsedMs > 0) ? elapsedMs : 0;
     tryStartSlideshow();
   }
 
-  // Gido本体(親フレーム)からの前面化合図のみを受け付ける。
+  // プレイヤー(親フレーム)からの前面化合図のみを受け付ける。elapsedMs は省略可(Gidoは送らない)。
   window.addEventListener('message', function (event) {
     if (event.source !== window.parent) return;
-    if (event.data && event.data.type === 'gido:activate') activate();
+    if (event.data && event.data.type === 'gido:activate') activate(event.data.elapsedMs);
   });
 
   // フォールバックは、iframe化されていない(スタンドアロン確認時、python -m http.server等で
@@ -502,7 +533,7 @@
   // (埋め込み時にもこれを無条件で動かすと、Gidoのプリロードリード時間(約15秒)より
   // フォールバック(1.5秒)の方が先に発火してしまい、postMessage同期が実質無効化される)。
   if (window.parent === window) {
-    activateFallbackTimer = setTimeout(activate, CONFIG.activateFallbackMs);
+    activateFallbackTimer = setTimeout(function () { activate(0); }, CONFIG.activateFallbackMs);
   }
 
   function loadAndRender(attempt) {
