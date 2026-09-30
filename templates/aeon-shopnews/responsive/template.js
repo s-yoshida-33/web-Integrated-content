@@ -453,6 +453,12 @@
     return (typeof value === 'number' && isFinite(value) && value > 0) ? value : 0;
   }
 
+  // rotationMs(プレイヤーがスケジュールから計算した、このコンテンツがこれまでに放映された
+  // 合計時間)。届いていなければnull。WSFが送り、Gidoは送らない(web-Integrated-content #12)。
+  function normalizeRotationMs(value) {
+    return (typeof value === 'number' && isFinite(value) && value >= 0) ? value : null;
+  }
+
   // 描画済みの画像(表示中のもの)を、デコードまで済ませる。decode()に失敗しても(画像が
   // 壊れている等)描画は続けるため、失敗は無視する。
   function decodeRenderedImages() {
@@ -508,6 +514,9 @@
   var activation = {
     dataReady: false, activated: false, started: false,
     prepareElapsedMs: 0, elapsedMs: 0,
+    // rotationMsが届いた場合は、端末に保存した再開位置ではなく、それから記事の位置を決める
+    // (端末や再起動をまたいでも同じ記事になる)。
+    prepareRotationMs: null, rotationMs: null,
     pendingArgs: null, renderedIndex: -1, renderSeq: 0
   };
   var activateFallbackTimer = null;
@@ -516,6 +525,10 @@
     if (activation.started || !activation.dataReady || !activation.activated) return;
     activation.started = true;
     var args = activation.pendingArgs;
+    if (activation.rotationMs !== null) {
+      startSlideshow(args.records, args.assetsMap, args.qrMap, 0, activation.renderedIndex, activation.rotationMs);
+      return;
+    }
     startSlideshow(args.records, args.assetsMap, args.qrMap, args.startIndex, activation.renderedIndex,
       activation.elapsedMs);
   }
@@ -526,7 +539,12 @@
     var args = activation.pendingArgs;
     if (!args || activation.started) return;
     var records = args.records;
-    var index = records.length ? indexAfterElapsed(args.startIndex, records.length, activation.prepareElapsedMs) : -1;
+    var index = -1;
+    if (records.length) {
+      index = activation.prepareRotationMs !== null
+        ? indexAfterElapsed(0, records.length, activation.prepareRotationMs)
+        : indexAfterElapsed(args.startIndex, records.length, activation.prepareElapsedMs);
+    }
     if (index === activation.renderedIndex && activation.dataReady) return;
 
     activation.dataReady = false;
@@ -546,13 +564,14 @@
     prerenderFirstRecord();
   }
 
-  function prepare(elapsedMs) {
+  function prepare(elapsedMs, rotationMs) {
     if (activation.started || activation.activated) return;
     activation.prepareElapsedMs = normalizeElapsedMs(elapsedMs);
+    activation.prepareRotationMs = normalizeRotationMs(rotationMs);
     prerenderFirstRecord();
   }
 
-  function activate(elapsedMs) {
+  function activate(elapsedMs, rotationMs) {
     if (activateFallbackTimer !== null) {
       clearTimeout(activateFallbackTimer);
       activateFallbackTimer = null;
@@ -560,15 +579,16 @@
     if (activation.activated) return;
     activation.activated = true;
     activation.elapsedMs = normalizeElapsedMs(elapsedMs);
+    activation.rotationMs = normalizeRotationMs(rotationMs);
     tryStartSlideshow();
   }
 
-  // プレイヤー(親フレーム)からの合図のみを受け付ける。gido:prepare・elapsedMs は省略可
-  // (Gidoは送らない)。
+  // プレイヤー(親フレーム)からの合図のみを受け付ける。gido:prepare・elapsedMs・rotationMs は
+  // 省略可(Gidoは送らない)。
   window.addEventListener('message', function (event) {
     if (event.source !== window.parent || !event.data) return;
-    if (event.data.type === 'gido:prepare') prepare(event.data.elapsedMs);
-    if (event.data.type === 'gido:activate') activate(event.data.elapsedMs);
+    if (event.data.type === 'gido:prepare') prepare(event.data.elapsedMs, event.data.rotationMs);
+    if (event.data.type === 'gido:activate') activate(event.data.elapsedMs, event.data.rotationMs);
   });
 
   // フォールバックは、iframe化されていない(スタンドアロン確認時、python -m http.server等で
