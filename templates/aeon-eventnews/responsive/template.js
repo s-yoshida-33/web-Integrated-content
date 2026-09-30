@@ -266,6 +266,30 @@
 
   function pad(n) { return String(n).padStart(2, '0'); }
 
+  // 画像を差し替える。新しい画像の読み込みが終わるまでは非表示(visibility: hidden)にし、前の記事の
+  // 画像・ロゴ・QRが新しい記事のテキストと一緒に見えないようにする。読み込みの完了順が入れ替わっても、
+  // 最後に指定したsrcのときだけ表示する。読み込めなかった画像は非表示のまま(web-Integrated-content #14)。
+  function setImageSrc(el, src) {
+    if (!el) return;
+    var next = src || '';
+    el.dataset.wsfPendingSrc = next;
+    if (!next) {
+      el.removeAttribute('src');
+      el.style.visibility = 'hidden';
+      return;
+    }
+    if (el.getAttribute('src') === next && el.complete && el.naturalWidth > 0) {
+      el.style.visibility = '';
+      return;
+    }
+    el.style.visibility = 'hidden';
+    el.onload = function () {
+      if (el.dataset.wsfPendingSrc === next) el.style.visibility = '';
+    };
+    el.onerror = null;
+    el.src = next;
+  }
+
   function renderClock() {
     var el = document.getElementById('header-clock');
     if (!el) return;
@@ -279,7 +303,7 @@
   function renderImage(record, assetsMap) {
     var el = document.getElementById('event-photo');
     if (!el) return;
-    el.src = record ? resolveAsset(record[CONFIG.imageField], assetsMap) : '';
+    setImageSrc(el, record ? resolveAsset(record[CONFIG.imageField], assetsMap) : '');
   }
 
   // <subTitle> を body コンテナのタイトルに描画する。
@@ -367,7 +391,7 @@
     var qrSrc = record ? resolveAsset(record.eventId, qrMap) : '';
     var shouldShow = !!(record && record.statusWeb === '1' && qrSrc);
     if (!shouldShow) {
-      qrEl.src = '';
+      setImageSrc(qrEl, '');
       qrEl.style.display = 'none';
       if (labelEl) labelEl.style.display = 'none';
       return;
@@ -375,7 +399,7 @@
 
     qrEl.style.display = '';
     if (labelEl) labelEl.style.display = '';
-    qrEl.src = qrSrc;
+    setImageSrc(qrEl, qrSrc);
   }
 
   function renderRecord(record, assetsMap, qrMap) {
