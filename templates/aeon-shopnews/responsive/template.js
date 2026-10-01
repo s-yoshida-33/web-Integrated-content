@@ -295,6 +295,50 @@
 
   function pad(n) { return String(n).padStart(2, '0'); }
 
+  // 次の記事の画像の先読み(web-Integrated-content #16)。src → 読み込み中またはデコード済みのImage。
+  // プレイヤー(WSF)のローカル配信はキャッシュさせない(no-store)ため、同じURLを<img>に指定し直すと
+  // 読み込み直しになりうる。そこで、切り替えの瞬間は<img>要素そのものを先読み済みの要素に差し替える。
+  var preloadedImages = {};
+
+  function preloadImages(srcs) {
+    var kept = {};
+    srcs.forEach(function (src) {
+      if (!src) return;
+      var img = preloadedImages[src];
+      if (!img) {
+        img = new Image();
+        img.src = src;
+        if (typeof img.decode === 'function') img.decode().catch(function () { /* noop */ });
+      }
+      kept[src] = img;
+    });
+    preloadedImages = kept;
+  }
+
+  // 先読みが済んでいれば、el をデコード済みの画像要素に差し替えて true を返す(id・class等は引き継ぐ)。
+  function swapInPreloaded(el, src) {
+    var img = preloadedImages[src];
+    if (!img || !img.complete || !(img.naturalWidth > 0) || !el.parentNode) return false;
+    delete preloadedImages[src];
+    Array.prototype.forEach.call(el.attributes, function (attr) {
+      if (attr.name !== 'src') img.setAttribute(attr.name, attr.value);
+    });
+    img.style.visibility = '';
+    img.dataset.wsfPendingSrc = src;
+    el.parentNode.replaceChild(img, el);
+    return true;
+  }
+
+  // 記事の描画で使う画像のsrc(renderImage・renderShopLogo・renderQrと同じ条件)。先読み用。
+  function recordImageSources(record, assetsMap, qrMap) {
+    if (!record) return [];
+    return [
+      resolveAsset(record[CONFIG.imageField], assetsMap),
+      resolveAsset(record.shopLogo, assetsMap),
+      record.statusWeb === '1' ? resolveAsset(record.shopNewsId, qrMap) : ''
+    ];
+  }
+
   // 画像を差し替える。新しい画像の読み込みが終わるまでは非表示(visibility: hidden)にし、前の記事の
   // 画像・ロゴ・QRが新しい記事のテキストと一緒に見えないようにする。読み込みの完了順が入れ替わっても、
   // 最後に指定したsrcのときだけ表示する。読み込めなかった画像は非表示のまま(web-Integrated-content #14)。
@@ -311,6 +355,7 @@
       el.style.visibility = '';
       return;
     }
+    if (swapInPreloaded(el, next)) return;
     el.style.visibility = 'hidden';
     el.onload = function () {
       if (el.dataset.wsfPendingSrc === next) el.style.visibility = '';
@@ -510,12 +555,14 @@
 
     if (records.length <= 1) return;
     current = (current + 1) % records.length;
+    preloadImages(recordImageSources(records[current], assetsMap, qrMap));
 
     function showNext() {
       var record = records[current];
       renderRecord(record, assetsMap, qrMap);
       setResumeId(record.shopNewsId);
       current = (current + 1) % records.length;
+      preloadImages(recordImageSources(records[current], assetsMap, qrMap));
     }
 
     setTimeout(function () {
