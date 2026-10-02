@@ -12,9 +12,11 @@ templates/
   aeon-eventnews/
     responsive/        縦型 (1080x1920) / 横型 (1920x1080) 自動切替フルスクリーン
     strip-1920x540/    層間 (横長・低高さ) バナー
+    xml/               aeon.jp形式XML用 (レイアウト・デザインは responsive/ と共通)
   aeon-shopnews/
     responsive/        縦型 (1080x1920) / 横型 (1920x1080) 自動切替フルスクリーン
     strip-1920x540/    層間 (横長・低高さ) バナー
+    xml/               aeon.jp形式XML用 (レイアウト・デザインは responsive/ と共通)
 ```
 
 各ディレクトリの中身がそのまま1つの Web Feed テンプレートに対応し、いずれも以下の構成です:
@@ -129,6 +131,32 @@ CMSが sync のたびに `qr-map.json`
 
 コンテナの正確な座標・寸法は各レイアウトの `style.css` の `.container-*` を参照してください。
 
+### aeon.jp形式XML用 (`xml/`)
+
+`templates/aeon-eventnews/xml/`
+
+`<eventroot>/<event>` 形式で、本文・写真が `<contents>` の入れ子になっているXML (例: 豊橋南SC) 用。
+レイアウト・デザイン (縦型/横型自動切替) は `responsive/` と同じで、`template.js` のデータの読み方のみ異なる。
+この形式のXMLを使うフィードには、`responsive/` の代わりにこのテンプレートを登録する (層間版は未作成)。
+
+CMSは入れ子の項目を `contents` 1つとしてしか認識しないため、`template.json.fields` は使わず、
+`data.xml` を直接読んで `CONFIG.fieldPaths` (レコード要素からの直下子要素のパス) で描画用のキーに対応付ける。
+
+| XML上のパス | 用途 | 備考 |
+|---|---|---|
+| `eventId` | id | レジューム/並び順、QR (`qr-map.json`) の参照キー |
+| `title` | タイトル | |
+| `contents/body` | 本文 | HTMLタグがエスケープされた文字列のため、タグを除いたテキストにして改行は半角スペースで連結 |
+| `contents/photos/photo/img_path` | メイン画像 | 先頭の写真のみ。`assets-map.json` のキーは前後の改行・空白を除いたURL |
+| `date` | フッター日付行 | 表示用に整形済み (`10月11日（日）`等) のためそのまま表示 |
+| `time` / `place` | フッター時間行 / 場所行 | 複数行の場合は半角スペースで連結 |
+| `update` | 並び順 (新しい順、同日は `eventId` 昇順) | `YYYY-MM-DD-HH-MM-SS` 形式 |
+| `pubstart` / `pubend` | 有効レコード判定 | 掲載期間内のみ表示。空欄 (`pubend` が空=終了日なし等) はその側の制限なし |
+
+- `statusWeb` / `statusSignage` が無いため、これらによる判定は行わない。WEB QRは `qr-map.json` で解決できた記事に表示する。
+- CMS側の前提設定: `template.json` の `assets` に `//contents/photos/photo/img_path`、`urlTemplates.qr.template` に `{pc_url}`
+  (いずれもCMS上でJSONを直接編集して設定)。
+
 ---
 
 ## SHOP NEWS (ショップニュース)
@@ -170,6 +198,28 @@ CMSが sync のたびに `qr-map.json`
   `shopLogo` が空の場合はロゴを非表示にし、テキストエリアをロゴ領域まで拡張 (x:20、幅700px) する。
 - **層間**: テキストエリアの縦幅に対してロゴを縦に並べると余白が少ないため、ロゴ(147x147)はインフォエリアの**左下に固定配置**
   (`position:absolute; left:20px; bottom:20px;`)。テキスト行数が1〜3行のいずれでも位置は変わらない。3行すべて表示される最大時でもテキストエリア下端とロゴ上端の間に5pxの余白が残り、重ならないことを実測済み。
+
+### aeon.jp形式XML用 (`xml/`)
+
+`templates/aeon-shopnews/xml/`
+
+`<shopNewsroot>/<shopNews>` 形式のXML (例: 豊橋南SC) 用。EVENT NEWSの `xml/` と同じ方式 (`CONFIG.fieldPaths` で
+`data.xml` を直接読む) で、レイアウト・デザインは `responsive/` と共通 (層間版は無し)。
+
+| XML上のパス | 用途 | 備考 |
+|---|---|---|
+| `shopNewsId` | id | レジューム/並び順、QR (`qr-map.json`) の参照キー |
+| `title` | タイトル | |
+| `contents/body` | 本文 | タグを除いたテキストにして改行は半角スペースで連結 |
+| `contents/photos/photo/img_path` | メイン画像 | 先頭の写真のみ。空欄の記事は画像なし |
+| `shopname` | フッター1行目 (ショップ名) | |
+| `time` | フッター2行目 (日付) | 開催期間が表示用に整形済み (`9月24日(金)〜10月18日(日)`等) で入っているためそのまま表示。空欄が多い |
+| `floor` | フッター3行目 (階数) | |
+| `update` | 並び順 (新しい順、同日は `shopNewsId` 昇順) | `YYYY-MM-DD-HH-MM-SS` 形式 |
+| `pubstart` / `pubend` | 有効レコード判定 | EVENT NEWSの `xml/` と同じ |
+
+- ショップロゴに当たる項目が無いため、常にロゴ無しのレイアウト (テキストエリア拡張) になる。
+- CMS側の前提設定はEVENT NEWSの `xml/` と同じ (`assets` に `//contents/photos/photo/img_path`、`urlTemplates.qr.template` に `{pc_url}`)。
 
 ---
 
